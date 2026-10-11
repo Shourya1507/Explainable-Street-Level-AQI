@@ -114,6 +114,14 @@
     </div>
 
     <div class="header-right">
+      <button class="route-btn" id="route-btn" title="Plan lowest pollution route across Delhi">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path d="M4 16l4-8 4 4 4-8"/>
+          <circle cx="4" cy="16" r="2"/>
+          <circle cx="16" cy="4" r="2"/>
+        </svg>
+        <span>Clean Route</span>
+      </button>
       <div class="lang-toggle" role="group" aria-label="Language">
         <button class="lang-btn active" id="lang-en" data-lang="en">EN</button>
         <button class="lang-btn" id="lang-hi" data-lang="hi">हिं</button>
@@ -129,9 +137,14 @@
     <div class="map-container" id="map-container">
       <div id="map" aria-label="Delhi air quality map"></div>
 
-      <!-- Quick Delhi Landmark Chips -->
-      <div class="quick-places-bar" id="quick-places-bar" role="toolbar" aria-label="Quick Delhi locations">
-        <span class="quick-places-label">Delhi Hotspots:</span>
+      <!-- Quick Delhi Landmark Chips & Map Toggles -->
+      <div class="quick-places-bar" id="quick-places-bar" role="toolbar" aria-label="Quick Delhi locations and layers">
+        <button class="heatmap-toggle-pill" id="heatmap-toggle-btn" title="Toggle Delhi PM2.5 spatial interpolation grid">
+          <span class="heatmap-dot"></span>
+          <span id="heatmap-btn-label">Area Heatmap Grid</span>
+        </button>
+        <div class="quick-divider"></div>
+        <span class="quick-places-label">Hotspots:</span>
         <button class="quick-place-chip" data-lat="28.6315" data-lon="77.2167">Connaught Place</button>
         <button class="quick-place-chip" data-lat="28.6129" data-lon="77.2295">India Gate</button>
         <button class="quick-place-chip" data-lat="28.6469" data-lon="77.3161">Anand Vihar</button>
@@ -191,6 +204,23 @@
     <!-- ── Side Panel ──────────────────────────────────────────────────────── -->
     <aside class="side-panel" id="side-panel" aria-label="Estimate results">
 
+      <!-- View Selector Tabs (Tier 5: 48h Forecast vs Nowcast) -->
+      <div class="panel-tabs" role="tablist" id="panel-tabs">
+        <button class="panel-tab active" id="tab-nowcast" role="tab" aria-selected="true">
+          <svg class="icon tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/>
+          </svg>
+          <span>Nowcast</span>
+        </button>
+        <button class="panel-tab" id="tab-forecast" role="tab" aria-selected="false">
+          <svg class="icon tab-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M3 15l4-5 4 2 6-8"/>
+            <circle cx="17" cy="4" r="1.5"/>
+          </svg>
+          <span>48h Forecast</span>
+        </button>
+      </div>
+
       <!-- Empty / initial state -->
       <div class="panel-state panel-empty" id="panel-empty">
         <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -215,66 +245,127 @@
       <!-- Result state -->
       <div class="panel-state panel-result" id="panel-result" hidden>
 
-        <!-- Estimate card -->
-        <div class="estimate-card" id="estimate-card">
-          <div class="estimate-header">
-            <div>
-              <div class="estimate-label">Estimated PM2.5</div>
-              <div class="estimate-value" id="pm25-value">—</div>
-              <div class="estimate-unit">µg/m³</div>
+        <!-- ── TAB 1: NOWCAST PANE ─────────────────────────────────────── -->
+        <div class="tab-pane active" id="tab-content-nowcast">
+          <!-- Estimate card -->
+          <div class="estimate-card" id="estimate-card">
+            <div class="estimate-header">
+              <div>
+                <div class="estimate-label">Estimated PM2.5</div>
+                <div class="estimate-value" id="pm25-value">—</div>
+                <div class="estimate-unit">µg/m³</div>
+              </div>
+              <div class="category-chip" id="category-chip">—</div>
             </div>
-            <div class="category-chip" id="category-chip">—</div>
+            <div class="model-label">Model estimate, not a measurement</div>
           </div>
-          <div class="model-label">Model estimate, not a measurement</div>
+
+          <!-- Confidence badge -->
+          <div class="confidence-badge" id="confidence-badge">
+            <div class="confidence-dots" id="confidence-dots"></div>
+            <div class="confidence-info">
+              <span class="confidence-level" id="confidence-level">—</span> confidence
+              <span class="confidence-dist" id="confidence-dist">· nearest station — km</span>
+            </div>
+          </div>
+
+          <div class="panel-divider"></div>
+
+          <!-- Why section -->
+          <section class="panel-section" aria-labelledby="why-heading">
+            <h2 class="section-heading" id="why-heading">Why</h2>
+
+            <!-- Explanation text -->
+            <div class="explanation-card" id="explanation-card">
+              <p class="explanation-text" id="explanation-text">—</p>
+              <span class="source-tag" id="source-tag" hidden>Template</span>
+            </div>
+
+            <!-- Driver bars -->
+            <div class="driver-list" id="driver-list" role="list" aria-label="Top contributing factors">
+              <!-- Populated by JS -->
+            </div>
+          </section>
+
+          <div class="panel-divider"></div>
+
+          <!-- What to do section -->
+          <section class="panel-section" aria-labelledby="advice-heading">
+            <h2 class="section-heading" id="advice-heading">What to do</h2>
+            <p class="advice-text" id="advice-text">—</p>
+            <button class="listen-btn" id="listen-btn" hidden>
+              <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+                <polygon points="6,4 16,10 6,16"/>
+              </svg>
+              Listen
+            </button>
+          </section>
+
+          <div class="panel-divider"></div>
+
+          <!-- Accuracy link -->
+          <div class="accuracy-link-row">
+            <span class="accuracy-caption">Model estimate, not a measurement.</span>
+            <button class="accuracy-link" id="accuracy-link">How accurate is this? →</button>
+          </div>
         </div>
 
-        <!-- Confidence badge -->
-        <div class="confidence-badge" id="confidence-badge">
-          <div class="confidence-dots" id="confidence-dots"></div>
-          <div class="confidence-info">
-            <span class="confidence-level" id="confidence-level">—</span> confidence
-            <span class="confidence-dist" id="confidence-dist">· nearest station — km</span>
-          </div>
-        </div>
-
-        <div class="panel-divider"></div>
-
-        <!-- Why section -->
-        <section class="panel-section" aria-labelledby="why-heading">
-          <h2 class="section-heading" id="why-heading">Why</h2>
-
-          <!-- Explanation text -->
-          <div class="explanation-card" id="explanation-card">
-            <p class="explanation-text" id="explanation-text">—</p>
-            <span class="source-tag" id="source-tag" hidden>Template</span>
+        <!-- ── TAB 2: 48-HOUR FORECAST PANE (Tier 5) ───────────────────── -->
+        <div class="tab-pane" id="tab-content-forecast" hidden>
+          <div class="forecast-header">
+            <div class="forecast-title-wrap">
+              <h3 class="forecast-title">48-Hour Air Quality Outlook</h3>
+              <span class="forecast-subtitle" id="forecast-location-name">Selected Location</span>
+            </div>
           </div>
 
-          <!-- Driver bars -->
-          <div class="driver-list" id="driver-list" role="list" aria-label="Top contributing factors">
-            <!-- Populated by JS -->
+          <!-- Forecast Stats Cards -->
+          <div class="forecast-stats-grid">
+            <div class="forecast-stat-card peak">
+              <div class="forecast-stat-label">Peak PM2.5</div>
+              <div class="forecast-stat-val" id="forecast-peak-val">—</div>
+              <div class="forecast-stat-sub" id="forecast-peak-time">—</div>
+            </div>
+            <div class="forecast-stat-card clean">
+              <div class="forecast-stat-label">Cleanest Window</div>
+              <div class="forecast-stat-val" id="forecast-clean-val">—</div>
+              <div class="forecast-stat-sub" id="forecast-clean-time">—</div>
+            </div>
+            <div class="forecast-stat-card avg">
+              <div class="forecast-stat-label">48h Average</div>
+              <div class="forecast-stat-val" id="forecast-avg-val">—</div>
+              <div class="forecast-stat-sub" id="forecast-avg-cat">—</div>
+            </div>
           </div>
-        </section>
 
-        <div class="panel-divider"></div>
+          <!-- Interactive Timeline SVG Chart Container -->
+          <div class="forecast-chart-container">
+            <div class="forecast-chart-header">
+              <span class="chart-label">Hourly PM2.5 Trajectory &amp; Confidence Band</span>
+              <span class="chart-legend-badge">±15% Horizon Band</span>
+            </div>
+            <div class="forecast-svg-wrap" id="forecast-svg-wrap">
+              <!-- Rendered dynamically by app.js -->
+            </div>
+          </div>
 
-        <!-- What to do section -->
-        <section class="panel-section" aria-labelledby="advice-heading">
-          <h2 class="section-heading" id="advice-heading">What to do</h2>
-          <p class="advice-text" id="advice-text">—</p>
-          <button class="listen-btn" id="listen-btn" hidden>
-            <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
-              <polygon points="6,4 16,10 6,16"/>
-            </svg>
-            Listen
-          </button>
-        </section>
+          <!-- Selected Hour Detail Card -->
+          <div class="forecast-hour-card" id="forecast-hour-detail">
+            <div class="hour-detail-header">
+              <span class="hour-detail-time" id="detail-hour-time">Tap any hour on chart</span>
+              <span class="category-chip" id="detail-hour-chip">—</span>
+            </div>
+            <div class="hour-detail-val"><span id="detail-hour-val">—</span> µg/m³</div>
+            <p class="hour-detail-driver" id="detail-hour-driver">Click chart points to inspect hour-by-hour atmospheric drivers and advisory.</p>
+          </div>
 
-        <div class="panel-divider"></div>
-
-        <!-- Accuracy link -->
-        <div class="accuracy-link-row">
-          <span class="accuracy-caption">Model estimate, not a measurement.</span>
-          <button class="accuracy-link" id="accuracy-link">How accurate is this? →</button>
+          <!-- Hourly Timeline List -->
+          <div class="forecast-list-wrap">
+            <h4 class="forecast-list-title">Hourly Breakdown</h4>
+            <div class="forecast-timeline-list" id="forecast-timeline-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
         </div>
 
       </div>
@@ -416,7 +507,137 @@
           <div class="saved-places-list" id="saved-places-list">
             <!-- Populated by JS -->
           </div>
-          <button class="outline-btn" id="signout-btn">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Route Planner Modal (Tier 7: Clean-Air Route Planner) ───────────── -->
+  <div class="modal-overlay" id="route-modal" role="dialog" aria-modal="true" aria-labelledby="route-title" hidden>
+    <div class="modal-panel route-panel">
+      <div class="modal-header">
+        <div class="route-title-wrap">
+          <h2 class="modal-title" id="route-title">Clean Route Planner</h2>
+          <span class="route-subtitle">Lowest-exposure commute routing</span>
+        </div>
+        <button class="modal-close" id="route-close" aria-label="Close">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M5 5l10 10M15 5L5 15"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body route-body">
+        <!-- Travel Mode Selector -->
+        <div class="route-modes" role="radiogroup" aria-label="Travel Mode">
+          <button class="route-mode-btn active" data-mode="walk" role="radio" aria-checked="true">
+            <span>🚶</span> Walking
+          </button>
+          <button class="route-mode-btn" data-mode="cycle" role="radio" aria-checked="false">
+            <span>🚴</span> Cycling
+          </button>
+          <button class="route-mode-btn" data-mode="drive" role="radio" aria-checked="false">
+            <span>🚗</span> Driving
+          </button>
+        </div>
+
+        <!-- Origin and Destination -->
+        <div class="route-fields">
+          <div class="route-field-row">
+            <span class="route-dot origin-dot"></span>
+            <div class="route-input-wrap">
+              <label for="route-origin" class="route-field-label">Origin (Start)</label>
+              <select id="route-origin" class="form-input route-select">
+                <option value="cp" selected>Connaught Place (Central)</option>
+                <option value="dwarka">Dwarka Sector 8 (West)</option>
+                <option value="rohini">Rohini Sector 14 (North)</option>
+                <option value="anand">Anand Vihar (East)</option>
+                <option value="hauz">Hauz Khas (South)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="route-connector-line"></div>
+
+          <div class="route-field-row">
+            <span class="route-dot dest-dot"></span>
+            <div class="route-input-wrap">
+              <label for="route-dest" class="route-field-label">Destination</label>
+              <select id="route-dest" class="form-input route-select">
+                <option value="indiagate" selected>India Gate (Central)</option>
+                <option value="igi">IGI Airport Terminal 3</option>
+                <option value="iit">IIT Delhi / Hauz Khas</option>
+                <option value="lodhi">Lodhi Gardens &amp; Road</option>
+                <option value="nehru">Nehru Place Hub</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button class="primary-btn calculate-route-btn" id="calculate-route-btn">
+          <span>Find Lowest-Pollution Route</span>
+        </button>
+
+        <!-- Route Comparison Output Cards -->
+        <div class="route-results-wrap" id="route-results-wrap">
+          <div class="route-result-card recommended" id="card-clean-route">
+            <div class="route-card-header">
+              <div class="route-badge-recommended">
+                <svg class="icon badge-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>Recommended: Lowest Inhaled Pollution</span>
+              </div>
+              <span class="route-exposure-saving">-28% exposure</span>
+            </div>
+            <div class="route-name" id="clean-route-name">Via Urban Green Corridor &amp; Tree Canopy</div>
+            <div class="route-metrics-grid">
+              <div class="route-metric">
+                <span class="metric-num" id="clean-route-time">18 min</span>
+                <span class="metric-lbl">Duration</span>
+              </div>
+              <div class="route-metric">
+                <span class="metric-num" id="clean-route-dist">4.2 km</span>
+                <span class="metric-lbl">Distance</span>
+              </div>
+              <div class="route-metric highlight">
+                <span class="metric-num" id="clean-route-pm25">92 µg/m³</span>
+                <span class="metric-lbl">Avg Inhaled PM2.5</span>
+              </div>
+            </div>
+            <p class="route-tradeoff-text" id="clean-route-tradeoff">
+              Takes 3 min longer via shaded boulevards, cutting fine particulate inhalation by ~28% compared to main arterial corridors.
+            </p>
+          </div>
+
+          <div class="route-result-card standard" id="card-direct-route">
+            <div class="route-card-header">
+              <span class="route-badge-standard">Direct Arterial Route</span>
+              <span class="route-exposure-penalty">+38% exposure</span>
+            </div>
+            <div class="route-name" id="direct-route-name">Via Ring Road &amp; Heavy Transit Corridors</div>
+            <div class="route-metrics-grid">
+              <div class="route-metric">
+                <span class="metric-num" id="direct-route-time">15 min</span>
+                <span class="metric-lbl">Duration</span>
+              </div>
+              <div class="route-metric">
+                <span class="metric-num" id="direct-route-dist">3.8 km</span>
+                <span class="metric-lbl">Distance</span>
+              </div>
+              <div class="route-metric">
+                <span class="metric-num" id="direct-route-pm25">148 µg/m³</span>
+                <span class="metric-lbl">Avg Inhaled PM2.5</span>
+              </div>
+            </div>
+            <p class="route-tradeoff-text">
+              Fastest route, but runs directly along high vehicle density exhaust plumes and trapped street canyons.
+            </p>
+          </div>
+        </div>
+
+        <div class="route-actions-footer">
+          <button class="secondary-btn" id="clear-route-btn">Clear Route on Map</button>
         </div>
       </div>
     </div>

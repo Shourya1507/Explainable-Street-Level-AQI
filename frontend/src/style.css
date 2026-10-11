@@ -920,3 +920,512 @@ img, svg { display: block; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Clean Route Header Button ───────────────────────────────────────────── */
+.route-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 150ms, color 150ms, transform 100ms;
+}
+.route-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.route-btn.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+/* ── Heatmap Grid Pill in Map Toolbar ────────────────────────────────────── */
+.heatmap-toggle-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+.heatmap-toggle-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.heatmap-toggle-pill.active {
+  background: #0F766E;
+  color: #ffffff;
+  border-color: #0F766E;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3);
+}
+.heatmap-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #F08A24;
+}
+.heatmap-toggle-pill.active .heatmap-dot {
+  background: #4ADE80;
+  box-shadow: 0 0 6px #4ADE80;
+}
+.quick-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+/* ── Side Panel Tabs (Tier 5: Nowcast vs 48h Forecast) ──────────────────── */
+.panel-tabs {
+  display: flex;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-input);
+  padding: 3px;
+  margin-bottom: var(--space-4);
+  gap: 3px;
+}
+.panel-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: calc(var(--radius-input) - 2px);
+  transition: all 150ms ease;
+}
+.panel-tab:hover:not(.active) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.5);
+}
+.panel-tab.active {
+  background: var(--bg-surface);
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(27, 36, 48, 0.08);
+}
+.tab-icon {
+  width: 16px;
+  height: 16px;
+}
+.tab-pane {
+  display: flex;
+  flex-direction: column;
+}
+.tab-pane[hidden] {
+  display: none !important;
+}
+
+/* ── 48-Hour Forecast Layout & Cards ─────────────────────────────────────── */
+.forecast-header {
+  margin-bottom: var(--space-3);
+}
+.forecast-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.forecast-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.forecast-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.forecast-stat-card {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 10px 8px;
+  text-align: center;
+}
+.forecast-stat-card.peak {
+  border-color: #F08A24;
+  background: #FEEFDD;
+}
+.forecast-stat-card.clean {
+  border-color: #3FA45B;
+  background: #E8F5EC;
+}
+.forecast-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.forecast-stat-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.forecast-stat-card.peak .forecast-stat-val { color: #8A4A06; }
+.forecast-stat-card.clean .forecast-stat-val { color: #1E6B3A; }
+.forecast-stat-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Forecast SVG Chart ──────────────────────────────────────────────────── */
+.forecast-chart-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 12px;
+  margin-bottom: var(--space-4);
+  box-shadow: 0 1px 6px rgba(27,36,48,0.04);
+}
+.forecast-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.chart-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.chart-legend-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-tint);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+}
+.forecast-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+.forecast-svg-wrap svg {
+  display: block;
+  overflow: visible;
+}
+.chart-point {
+  cursor: pointer;
+  transition: r 150ms ease, stroke-width 150ms ease;
+}
+.chart-point:hover {
+  r: 6;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+/* ── Selected Hour Card & Timeline ───────────────────────────────────────── */
+.forecast-hour-card {
+  background: var(--bg-subtle);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-input);
+  padding: 10px 14px;
+  margin-bottom: var(--space-4);
+}
+.hour-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.hour-detail-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.hour-detail-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hour-detail-driver {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.forecast-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.forecast-list-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.forecast-timeline-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 4px;
+}
+.forecast-hour-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-input);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.forecast-hour-row:hover {
+  background: var(--bg-hover);
+}
+.hour-row-time {
+  font-weight: 500;
+  color: var(--text);
+  width: 90px;
+}
+.hour-row-pm25 {
+  font-weight: 700;
+  color: var(--text);
+  text-align: right;
+  flex: 1;
+  margin-right: 12px;
+}
+.hour-row-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  min-width: 72px;
+  text-align: center;
+}
+
+/* ── Route Planner Modal & Cards (Tier 7) ────────────────────────────────── */
+.route-panel {
+  max-width: 580px;
+  max-height: 90vh;
+}
+.route-body {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+}
+.route-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.route-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.route-modes {
+  display: flex;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-input);
+  padding: 4px;
+  gap: 4px;
+}
+.route-mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: calc(var(--radius-input) - 2px);
+  transition: all 150ms ease;
+}
+.route-mode-btn.active {
+  background: var(--bg-surface);
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(27,36,48,0.08);
+}
+.route-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+  position: relative;
+}
+.route-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.route-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.origin-dot {
+  background: #3FA45B;
+  box-shadow: 0 0 0 3px #E8F5EC;
+}
+.dest-dot {
+  background: #E04F39;
+  box-shadow: 0 0 0 3px #FDE8E4;
+}
+.route-connector-line {
+  width: 2px;
+  height: 18px;
+  background: var(--border);
+  margin-left: 5px;
+}
+.route-input-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.route-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.route-select {
+  background: var(--bg-surface);
+  height: 36px;
+  font-weight: 500;
+}
+.calculate-route-btn {
+  height: 42px;
+  font-size: 14px;
+}
+.route-results-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.route-result-card {
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: box-shadow 150ms;
+}
+.route-result-card.recommended {
+  border: 2px solid var(--accent);
+  background: #F4FAF9;
+  box-shadow: 0 4px 14px rgba(15,118,110,0.1);
+}
+.route-result-card.standard {
+  background: var(--bg-surface);
+}
+.route-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.route-badge-recommended {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.badge-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+.route-badge-standard {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.route-exposure-saving {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E6B3A;
+  background: #E8F5EC;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.route-exposure-penalty {
+  font-size: 12px;
+  font-weight: 600;
+  color: #A12A18;
+  background: #FDE8E4;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.route-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.route-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-input);
+  padding: 8px 10px;
+}
+.route-metric {
+  display: flex;
+  flex-direction: column;
+}
+.route-metric.highlight .metric-num {
+  color: var(--accent);
+}
+.metric-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+.metric-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.route-tradeoff-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.route-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+

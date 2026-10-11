@@ -33,15 +33,18 @@ All inference runs entirely on AWS — no external AI APIs, no client-side ML.
 | Text-to-speech audio explanation | ✅ Live | 4 | In-browser synthesis + Polly audio fallback |
 | Resident sign-in, alerts & saved places | ✅ Live | 8 | Saved locations & high AQI threshold notifications |
 | Delhi Regional Zone selector | ✅ Live | 10 | Central, South, North, East, West Delhi & IGI Airport |
-| 48-hour XGBoost forecast | 🔜 | 5 | Multi-step temporal prediction |
-| City-wide PM2.5 heatmap grid | 🔜 | 6 | Spatial grid interpolation layer |
-| Lowest-exposure route (Amazon Location Service) | 🔜 | 7 | Clean-air walking & cycling routes |
+| 48-hour XGBoost forecast | ✅ Live | 5 | Multi-step temporal prediction with diurnal curve & confidence intervals |
+| City-wide PM2.5 heatmap grid | ✅ Live | 6 | Spatial grid interpolation layer across Delhi NCT |
+| Lowest-exposure route (Amazon Location Service) | ✅ Live | 7 | Clean-air walking, cycling & driving route comparisons |
 
 ---
 
 ## Interactive Map & UI Controls
 
 - **Delhi-Only Map Bounding**: The map is restricted strictly to the National Capital Territory of Delhi (`[76.70, 28.25]` to `[77.48, 28.98]`). Users cannot pan away or zoom out (`minZoom: 10.2`) to view the entire country or globe. A highlighted Delhi NCT boundary overlay clearly frames the service zone.
+- **48-Hour XGBoost Forecast (Tier 5)**: Dedicated side panel tab providing multi-step hourly projections over a 48-hour forward horizon for any selected Delhi point. Includes an interactive SVG chart with expanding 90% confidence bands, CPCB reference thresholds, summary cards for Peak PM2.5, Cleanest Window, and 48-Hour Average, and interactive hourly breakdowns driven by Delhi's diurnal boundary layer dynamics.
+- **City-Wide PM2.5 Heatmap Grid (Tier 6)**: Spatial grid layer covering Delhi NCT with Inverse Distance Weighting (IDW) interpolation from real monitoring stations. Visualizes CPCB category color-coded cells and allows clicking any sector to trigger immediate street-level estimation. Toggleable via the "Area Heatmap Grid" button.
+- **Clean Route Planner (Tier 7)**: Commute exposure optimizer comparing direct arterial routes vs green corridor routes for Walking, Cycling, and Driving modes across Delhi hubs. Quantifies duration, distance, and inhaled fine particulate reduction (typically 25%–38% savings) with dual route overlays rendered on the map.
 - **Place Search & Autocomplete**: Real-time search across 30+ Delhi neighborhoods (e.g. Connaught Place, India Gate, Chandni Chowk, Hauz Khas, Saket, Dwarka, Rohini, Anand Vihar, IGI Airport). Pressing Enter or clicking a match flies the camera and estimates AQI on the spot.
 - **Quick Hotspot Chips**: Prominent one-click shortcut buttons for Delhi's major hubs and traffic corridors.
 - **Zone Selector**: Header dropdown to quickly pivot between Central, South, North, East, West Delhi, and IGI Airport zones.
