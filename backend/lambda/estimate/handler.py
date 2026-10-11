@@ -14,7 +14,9 @@ import math
 import urllib.request
 import urllib.parse
 import boto3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+IST_OFFSET = timedelta(hours=5, minutes=30)
 
 MOCK_MODE = os.environ.get("MOCK_MODE", "true").lower() == "true"
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
@@ -142,8 +144,7 @@ def fetch_live_weather(lat: float, lon: float) -> dict:
             return {}
         # Open-Meteo returns times in Asia/Kolkata when timezone=Asia/Kolkata
         # Compare with current IST time (UTC+5:30)
-        from datetime import timedelta
-        now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        now_ist = datetime.now(timezone.utc) + IST_OFFSET
         now_str = now_ist.strftime("%Y-%m-%dT%H:00")
         # Find closest past time index
         idx = 0
@@ -233,15 +234,16 @@ def haversine_km(lat1, lon1, lat2, lon2) -> float:
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     return R * 2 * math.asin(math.sqrt(max(0, a)))
 
-# ── Time features ──────────────────────────────────────────────────────────────
-def time_features(dt: datetime) -> dict:
+# ── Time features (caller must pass an IST datetime) ──────────────────────────
+def time_features(dt_ist: datetime) -> dict:
+    """dt_ist must already be in IST (UTC+5:30) so peak-hour flags are correct."""
     return {
-        "hour_of_day":    dt.hour,
-        "day_of_week":    dt.weekday(),
-        "month":          dt.month,
-        "is_weekend":     int(dt.weekday() >= 5),
-        "is_morning_peak":int(dt.hour in [7, 8, 9, 10]),
-        "is_evening_peak":int(dt.hour in [17, 18, 19, 20]),
+        "hour_of_day":    dt_ist.hour,
+        "day_of_week":    dt_ist.weekday(),
+        "month":          dt_ist.month,
+        "is_weekend":     int(dt_ist.weekday() >= 5),
+        "is_morning_peak":int(dt_ist.hour in [7, 8, 9, 10]),
+        "is_evening_peak":int(dt_ist.hour in [17, 18, 19, 20]),
     }
 
 # ── Road density (static lookup — expand as needed) ───────────────────────────
@@ -340,17 +342,20 @@ def handler(event, context):
         return {"statusCode": 200, "headers": CORS, "body": json.dumps(resp_body)}
 
     # ── Real mode (Tier 1+) ───────────────────────────────────────────────────
+    inference_mode = "unknown"  # set in try or except block below
     try:
         # Parse the request timestamp for time features
         try:
-            req_dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            req_dt_utc = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
         except Exception:
-            req_dt = datetime.now(timezone.utc)
+            req_dt_utc = datetime.now(timezone.utc)
+        # Convert to IST so hour-of-day and peak flags are Delhi local
+        req_dt_ist = req_dt_utc.astimezone(timezone(IST_OFFSET))
 
         # Build feature vector
         weather = fetch_live_weather(lat, lon)
         station_feats = nearest_station_features(lat, lon)
-        t_feats = time_features(req_dt)
+        t_feats = time_features(req_dt_ist)
 
         features = {
             **weather,
@@ -378,9 +383,14 @@ def handler(event, context):
         print(f"Prediction pipeline failed: {type(e).__name__}: {e}")
         print(traceback.format_exc())
         # Graceful fallback — use IDW from stations if available
-        station_feats = nearest_station_features(lat, lon) if "station_feats" not in dir() else station_feats
-        weather = fetch_live_weather(lat, lon) if "weather" not in dir() else weather
-        t_feats = time_features(req_dt) if "t_feats" not in dir() else t_feats
+        if "station_feats" not in locals():
+            station_feats = nearest_station_features(lat, lon)
+        if "weather" not in locals():
+            weather = fetch_live_weather(lat, lon)
+        if "req_dt_ist" not in locals():
+            req_dt_ist = datetime.now(timezone(IST_OFFSET))
+        if "t_feats" not in locals():
+            t_feats = time_features(req_dt_ist)
 
         idw = station_feats.get("nearby_station_idw", MOCK_RESPONSE["pm25"])
         pm25 = idw if (idw and not math.isnan(idw)) else MOCK_RESPONSE["pm25"]
@@ -460,7 +470,7 @@ def handler(event, context):
         "explanation":       explanation,
         "advice":            advice,
         "explanation_source":source,
-        "inference_mode":    inference_mode if 'inference_mode' in dir() else "unknown",
+        "inference_mode":    inference_mode,
         "lat":               lat,
         "lon":               lon,
         "timestamp":         timestamp,

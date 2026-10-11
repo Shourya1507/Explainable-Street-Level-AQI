@@ -1,11 +1,14 @@
 # Lambda estimate function dependencies
 # NOTE: boto3 is provided by the Lambda runtime — no need to bundle it.
-# xgboost, shap, pandas, numpy must be in a Lambda Layer (arm64 / python3.12).
-# See infra/build_lambda_layer.sh for how to build the layer.
+# xgboost-cpu and numpy must be packaged into an AWS Lambda Layer (x86_64 / python3.12).
+# See infra/build_lambda_layer.sh for the build script.
+#
+# NOTE: shap, pandas, and scipy are deliberately NOT needed at inference time:
+#   - SHAP feature contributions are computed natively via booster.predict(pred_contribs=True).
+#   - Feature arrays are built with numpy directly.
+# This keeps the layer well under Lambda's 250 MB unzipped limit (~60 MB zipped, ~130 MB unzipped).
 boto3>=1.35.0       # AWS SDK — runtime-provided, listed for local dev only
 
-# ML inference dependencies — must be packaged into a Lambda Layer:
-xgboost>=2.0.3
-shap>=0.45.0
-pandas>=2.1.0
+# ML inference dependencies (packaged into Lambda Layer):
+xgboost-cpu>=2.0.3
 numpy>=1.26.0

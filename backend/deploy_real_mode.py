@@ -76,6 +76,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--openaq-key", default=os.environ.get("OPENAQ_API_KEY", ""),
                         help="OpenAQ API key to inject into Lambda env vars")
+    parser.add_argument("--layer-arn", default=os.environ.get("ML_LAYER_ARN", ""),
+                        help="ARN of the Lambda Layer containing xgboost-cpu and numpy")
     args = parser.parse_args()
 
     try:
@@ -101,6 +103,16 @@ def main():
     if args.openaq_key:
         estimate_env["OPENAQ_API_KEY"] = args.openaq_key
     update_env_vars(lam, ESTIMATE_FUNCTION, estimate_env)
+
+    if args.layer_arn:
+        print(f"  Attaching Lambda Layer: {args.layer_arn}")
+        lam.update_function_configuration(
+            FunctionName=ESTIMATE_FUNCTION,
+            Layers=[args.layer_arn],
+        )
+        waiter = lam.get_waiter("function_updated")
+        waiter.wait(FunctionName=ESTIMATE_FUNCTION)
+        print(f"  Layer attached successfully")
 
     # ── Deploy aqi-stations ───────────────────────────────────────────────────
     print(f"\n=== Deploying {STATIONS_FUNCTION} ===")
