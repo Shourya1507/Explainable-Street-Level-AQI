@@ -17,16 +17,84 @@
   <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header class="app-header" role="banner">
     <div class="header-left">
-      <button class="city-selector" id="city-selector" aria-haspopup="listbox" aria-expanded="false">
-        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
-          <path d="M10 2C6.686 2 4 4.686 4 8c0 4.5 6 10 6 10s6-5.5 6-10c0-3.314-2.686-6-6-6z"/>
-          <circle cx="10" cy="8" r="2"/>
-        </svg>
-        <span id="city-name">Delhi</span>
-        <svg class="icon chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
-          <path d="M5 8l5 5 5-5"/>
-        </svg>
-      </button>
+      <div class="city-selector-wrap">
+        <button class="city-selector" id="city-selector" aria-haspopup="listbox" aria-expanded="false" title="Switch Delhi zone or city">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M10 2C6.686 2 4 4.686 4 8c0 4.5 6 10 6 10s6-5.5 6-10c0-3.314-2.686-6-6-6z"/>
+            <circle cx="10" cy="8" r="2"/>
+          </svg>
+          <span id="city-name">Delhi (NCT)</span>
+          <svg class="icon chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M5 8l5 5 5-5"/>
+          </svg>
+        </button>
+
+        <!-- City / Zone Dropdown Menu -->
+        <div class="city-dropdown" id="city-dropdown" role="listbox" aria-label="Delhi zones" hidden>
+          <div class="dropdown-header">Delhi Regional Focus</div>
+          <button class="dropdown-item active" data-lat="28.6139" data-lon="77.2090" data-name="Central Delhi (Connaught Place)">
+            <span class="dropdown-status-dot"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">Central Delhi</span>
+              <span class="dropdown-item-sub">Connaught Place · India Gate · Mandir Marg</span>
+            </div>
+            <span class="active-badge">Active</span>
+          </button>
+          <button class="dropdown-item" data-lat="28.5562" data-lon="77.1749" data-name="South Delhi (Hauz Khas / Saket)">
+            <span class="dropdown-status-dot"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">South Delhi</span>
+              <span class="dropdown-item-sub">Hauz Khas · Saket · RK Puram · Lodhi Rd</span>
+            </div>
+          </button>
+          <button class="dropdown-item" data-lat="28.7041" data-lon="77.1025" data-name="North Delhi (Rohini / Pitampura)">
+            <span class="dropdown-status-dot"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">North Delhi</span>
+              <span class="dropdown-item-sub">Rohini · Pitampura · Wazirpur · Civil Lines</span>
+            </div>
+          </button>
+          <button class="dropdown-item" data-lat="28.6469" data-lon="77.3161" data-name="East Delhi (Anand Vihar / Mayur Vihar)">
+            <span class="dropdown-status-dot"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">East Delhi</span>
+              <span class="dropdown-item-sub">Anand Vihar · Vivek Vihar · Laxmi Nagar</span>
+            </div>
+          </button>
+          <button class="dropdown-item" data-lat="28.5870" data-lon="77.0480" data-name="West Delhi (Dwarka / Janakpuri)">
+            <span class="dropdown-status-dot"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">West Delhi</span>
+              <span class="dropdown-item-sub">Dwarka · Janakpuri · Punjabi Bagh</span>
+            </div>
+          </button>
+          <button class="dropdown-item" data-lat="28.5562" data-lon="77.1000" data-name="South-West (IGI Airport)">
+            <span class="dropdown-status-dot"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">IGI Airport Terminal</span>
+              <span class="dropdown-item-sub">Aviation & transit corridor</span>
+            </div>
+          </button>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-header">Candidate NCR Cities</div>
+          <div class="dropdown-item disabled">
+            <span class="dropdown-status-dot gray"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">Noida / Greater Noida</span>
+              <span class="dropdown-item-sub">Tier 10 roadmap</span>
+            </div>
+            <span class="upcoming-badge">Soon</span>
+          </div>
+          <div class="dropdown-item disabled">
+            <span class="dropdown-status-dot gray"></span>
+            <div class="dropdown-text">
+              <span class="dropdown-item-title">Gurugram Cyber City</span>
+              <span class="dropdown-item-sub">Tier 10 roadmap</span>
+            </div>
+            <span class="upcoming-badge">Soon</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="header-center">
@@ -34,7 +102,14 @@
         <svg class="icon search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
           <circle cx="9" cy="9" r="5"/><path d="M15 15l-3-3"/>
         </svg>
-        <input type="text" id="place-search" class="search-input" placeholder="Search a place in Delhi" autocomplete="off" />
+        <input type="text" id="place-search" class="search-input" placeholder="Search any Delhi street, metro or area…" autocomplete="off" aria-label="Search Delhi place" />
+        <button class="search-clear-btn" id="search-clear-btn" aria-label="Clear search" hidden>
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M5 5l10 10M15 5L5 15"/>
+          </svg>
+        </button>
+        <!-- Search suggestions dropdown -->
+        <div class="search-suggestions" id="search-suggestions" role="listbox" hidden></div>
       </div>
     </div>
 
@@ -54,12 +129,24 @@
     <div class="map-container" id="map-container">
       <div id="map" aria-label="Delhi air quality map"></div>
 
+      <!-- Quick Delhi Landmark Chips -->
+      <div class="quick-places-bar" id="quick-places-bar" role="toolbar" aria-label="Quick Delhi locations">
+        <span class="quick-places-label">Delhi Hotspots:</span>
+        <button class="quick-place-chip" data-lat="28.6315" data-lon="77.2167">Connaught Place</button>
+        <button class="quick-place-chip" data-lat="28.6129" data-lon="77.2295">India Gate</button>
+        <button class="quick-place-chip" data-lat="28.6469" data-lon="77.3161">Anand Vihar</button>
+        <button class="quick-place-chip" data-lat="28.5870" data-lon="77.0480">Dwarka</button>
+        <button class="quick-place-chip" data-lat="28.7395" data-lon="77.1194">Rohini</button>
+        <button class="quick-place-chip" data-lat="28.5562" data-lon="77.1000">IGI Airport</button>
+        <button class="quick-place-chip" data-lat="28.5498" data-lon="77.2173">Hauz Khas / Siri Fort</button>
+      </div>
+
       <!-- Map hint -->
       <div class="map-hint" id="map-hint" role="status">
         <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
           <circle cx="10" cy="10" r="7"/><path d="M10 7v4"/><circle cx="10" cy="13.5" r=".5" fill="currentColor"/>
         </svg>
-        Tap anywhere on the map for an estimate
+        <span id="hint-text">Tap anywhere inside Delhi for street-level estimate</span>
       </div>
 
       <!-- Time selector -->
@@ -286,6 +373,57 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Sign-in Modal (Tier 8: Saved Places & Alerts) ─────────────────── -->
+  <div class="modal-overlay" id="signin-overlay" role="dialog" aria-modal="true" aria-labelledby="signin-title" hidden>
+    <div class="modal-panel auth-panel">
+      <div class="modal-header">
+        <h2 class="modal-title" id="signin-title">Resident Sign In</h2>
+        <button class="modal-close" id="signin-close" aria-label="Close">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M5 5l10 10M15 5L5 15"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body auth-body">
+        <p class="auth-sub">Sign in to save your Delhi locations (Home, Work, School) and receive high AQI threshold notifications.</p>
+
+        <form id="signin-form" class="auth-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="signin-name">Your Name</label>
+            <input type="text" id="signin-name" class="form-input" placeholder="e.g. Aditri Singh" />
+          </div>
+          <div class="form-group">
+            <label for="signin-email">Email or WhatsApp Number</label>
+            <input type="text" id="signin-email" class="form-input" placeholder="e.g. aditri@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="signin-alert-thresh">Notify me when air quality reaches</label>
+            <select id="signin-alert-thresh" class="form-input">
+              <option value="Poor">Poor (91+ µg/m³)</option>
+              <option value="Very Poor" selected>Very Poor (121+ µg/m³)</option>
+              <option value="Severe">Severe (250+ µg/m³)</option>
+            </select>
+          </div>
+          <div class="auth-btn-row">
+            <button type="submit" class="primary-btn" id="signin-submit-btn">Sign in &amp; Save</button>
+            <button type="button" class="secondary-btn" id="signin-guest-btn">Quick Demo Resident</button>
+          </div>
+        </form>
+
+        <div class="saved-places-section" id="saved-places-section" hidden>
+          <div class="dropdown-header">Saved Delhi Locations</div>
+          <div class="saved-places-list" id="saved-places-list">
+            <!-- Populated by JS -->
+          </div>
+          <button class="outline-btn" id="signout-btn">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast" role="alert" aria-live="polite" hidden></div>
 
   <script src="app.js"></script>
 </body>

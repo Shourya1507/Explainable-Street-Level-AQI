@@ -525,28 +525,14 @@ img, svg { display: block; }
 
 /* ── MapLibre station markers ──────────────────────────────────────────── */
 .station-marker {
-  width: 30px; height: 30px;
+  width: 18px; height: 18px;
   border-radius: 50%;
-  border: 2.5px solid rgba(255,255,255,0.9);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
   cursor: pointer;
-  transition: transform 150ms, box-shadow 150ms;
-  line-height: 1;
+  transition: transform 150ms;
 }
-.station-marker:hover { transform: scale(1.2); box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
-
-/* MapLibre popup overrides */
-.maplibregl-popup-content {
-  border-radius: 10px !important;
-  padding: 10px 14px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
-  font-family: 'Inter', sans-serif !important;
-  min-width: 140px;
-}
-.maplibregl-popup-close-button {
-  font-size: 16px !important;
-  padding: 4px 8px !important;
-}
+.station-marker:hover { transform: scale(1.25); }
 
 /* ── Responsive: tablet ──────────────────────────────────────────────────── */
 @media (max-width: 1023px) {
@@ -576,3 +562,361 @@ img, svg { display: block; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ── City Selector Dropdown ──────────────────────────────────────────────── */
+.city-selector-wrap {
+  position: relative;
+}
+.city-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 320px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 28px rgba(27,36,48,0.14);
+  padding: var(--space-2);
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.city-dropdown[hidden] {
+  display: none;
+}
+.dropdown-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: var(--space-2) var(--space-3) 4px;
+}
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-input);
+  text-align: left;
+  transition: background 150ms;
+  width: 100%;
+}
+.dropdown-item:hover:not(.disabled) {
+  background: var(--bg-hover);
+}
+.dropdown-item.active {
+  background: var(--accent-tint);
+}
+.dropdown-item.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.dropdown-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.dropdown-status-dot.gray {
+  background: var(--text-muted);
+}
+.dropdown-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.dropdown-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.dropdown-item-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.active-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  background: #fff;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+}
+.upcoming-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+}
+
+/* ── Search Bar Enhancements ─────────────────────────────────────────────── */
+.search-clear-btn {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border-radius: 50%;
+  transition: background 150ms, color 150ms;
+}
+.search-clear-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.search-clear-btn[hidden] {
+  display: none;
+}
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 24px rgba(27,36,48,0.12);
+  max-height: 320px;
+  overflow-y: auto;
+  z-index: 150;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.search-suggestions[hidden] {
+  display: none;
+}
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  transition: background 150ms;
+  width: 100%;
+}
+.suggestion-item:hover,
+.suggestion-item.selected {
+  background: var(--bg-hover);
+}
+.suggestion-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.suggestion-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.suggestion-name {
+  font-weight: 500;
+  color: var(--text);
+}
+.suggestion-zone {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Quick Delhi Places Bar ──────────────────────────────────────────────── */
+.quick-places-bar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  box-shadow: var(--shadow-float);
+  overflow-x: auto;
+  max-width: calc(100% - 140px);
+}
+.quick-places-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.quick-place-chip {
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg-subtle);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: background 150ms, color 150ms, transform 100ms;
+}
+.quick-place-chip:hover {
+  background: var(--accent-tint);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.quick-place-chip:active {
+  transform: translateY(0);
+}
+
+/* ── Auth / Sign-in Modal & Buttons ──────────────────────────────────────── */
+.auth-panel {
+  max-width: 440px;
+}
+.auth-body {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.auth-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.form-input {
+  height: 38px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  background: var(--bg-subtle);
+  font-size: 14px;
+  color: var(--text);
+  transition: border-color 150ms, background 150ms;
+}
+.form-input:focus {
+  border-color: var(--focus);
+  background: #fff;
+  outline: none;
+}
+.auth-btn-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.primary-btn {
+  flex: 1;
+  height: 40px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-input);
+  transition: opacity 150ms;
+}
+.primary-btn:hover {
+  opacity: 0.9;
+}
+.secondary-btn {
+  height: 40px;
+  padding: 0 var(--space-3);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-input);
+  transition: background 150ms;
+}
+.secondary-btn:hover {
+  background: var(--bg-hover);
+}
+.outline-btn {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--error-text);
+  background: var(--error-tint);
+  transition: opacity 150ms;
+  margin-top: var(--space-2);
+}
+.outline-btn:hover {
+  opacity: 0.85;
+}
+.saved-places-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+}
+.saved-place-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-input);
+  font-size: 13px;
+}
+.saved-place-name {
+  font-weight: 600;
+}
+.saved-place-cat {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-weight: 600;
+}
+
+/* ── Toast Notification ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #1B2430;
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: var(--radius-card);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  z-index: 200;
+  animation: toastFadeIn 200ms ease;
+}
+@keyframes toastFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
