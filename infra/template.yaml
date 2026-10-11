@@ -20,6 +20,10 @@ Parameters:
   BedrockModelId:
     Type: String
     Default: "anthropic.claude-3-haiku-20240307-v1:0"
+  MlLayerArn:
+    Type: String
+    Default: ""
+    Description: "ARN of the Lambda Layer containing xgboost, shap, pandas, numpy. Build with infra/build_lambda_layer.sh"
 
 Globals:
   Function:
@@ -34,6 +38,10 @@ Globals:
         BEDROCK_MODEL_ID: !Ref BedrockModelId
         SAGEMAKER_ENDPOINT: !Ref SageMakerEndpoint
         STATIONS_S3_BUCKET: !Sub "aqi-features-${AccountId}"
+
+# ── Conditions ────────────────────────────────────────────────────────────────
+Conditions:
+  HasMlLayer: !Not [!Equals [!Ref MlLayerArn, ""]]
 
 # ── IAM Roles ────────────────────────────────────────────────────────────────
 Resources:
@@ -62,21 +70,26 @@ Resources:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
                 Resource: !GetAtt CacheTable.Arn
-              # Bedrock invoke
+              # Bedrock invoke — scoped to the specific model
               - Effect: Allow
                 Action:
                   - bedrock:InvokeModel
-                Resource: "*"
+                Resource: !Sub "arn:aws:bedrock:ap-south-1::foundation-model/${BedrockModelId}"
               # SageMaker invoke endpoint
               - Effect: Allow
                 Action:
                   - sagemaker:InvokeEndpoint
                 Resource: !Sub "arn:aws:sagemaker:ap-south-1:${AccountId}:endpoint/*"
-              # S3 features read
+              # S3 features read (live station data)
               - Effect: Allow
                 Action:
                   - s3:GetObject
                 Resource: !Sub "arn:aws:s3:::aqi-features-${AccountId}/*"
+              # S3 models read (XGBoost model artifact)
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::aqi-models-${AccountId}/*"
 
   StationsFunctionRole:
     Type: AWS::IAM::Role
@@ -125,6 +138,11 @@ Resources:
       CodeUri: ../backend/lambda/estimate/
       Handler: handler.handler
       Role: !GetAtt EstimateFunctionRole.Arn
+      # ML layer (xgboost, shap, pandas, numpy) — attach when MlLayerArn is provided
+      Layers: !If
+        - HasMlLayer
+        - [!Ref MlLayerArn]
+        - !Ref AWS::NoValue
       Events:
         EstimatePost:
           Type: Api

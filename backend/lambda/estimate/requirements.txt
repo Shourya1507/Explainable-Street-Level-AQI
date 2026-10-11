@@ -1,1 +1,11 @@
-boto3==1.35.0
+# Lambda estimate function dependencies
+# NOTE: boto3 is provided by the Lambda runtime — no need to bundle it.
+# xgboost, shap, pandas, numpy must be in a Lambda Layer (arm64 / python3.12).
+# See infra/build_lambda_layer.sh for how to build the layer.
+boto3>=1.35.0       # AWS SDK — runtime-provided, listed for local dev only
+
+# ML inference dependencies — must be packaged into a Lambda Layer:
+xgboost>=2.0.3
+shap>=0.45.0
+pandas>=2.1.0
+numpy>=1.26.0

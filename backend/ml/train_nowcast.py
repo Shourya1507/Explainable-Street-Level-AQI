@@ -31,10 +31,10 @@ MODELS_BUCKET = os.environ.get("MODELS_BUCKET", "aqi-models-991166714312")
 
 # Feature columns for the model (must match build_features.py)
 FEATURE_COLS = [
-    # "nearby_station_avg",
-    # "nearby_station_idw",
-    # "neighbor_spread",
-    # "nearest_station_km",
+    "nearby_station_avg",
+    "nearby_station_idw",
+    "neighbor_spread",
+    "nearest_station_km",
     "temperature",
     "humidity",
     "wind_speed",
@@ -48,7 +48,7 @@ FEATURE_COLS = [
     "is_weekend",
     "is_morning_peak",
     "is_evening_peak",
-    # fire_count and aod added in Tier 6
+    # "fire_count", "aod",  # Tier 6 – not yet in production data pipeline
 ]
 
 TARGET_COL = "pm25"

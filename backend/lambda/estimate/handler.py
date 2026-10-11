@@ -140,9 +140,12 @@ def fetch_live_weather(lat: float, lon: float) -> dict:
         times = hourly.get("time", [])
         if not times:
             return {}
-        # Pick the most recent past hour
-        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00")
-        # Find closest time index
+        # Open-Meteo returns times in Asia/Kolkata when timezone=Asia/Kolkata
+        # Compare with current IST time (UTC+5:30)
+        from datetime import timedelta
+        now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        now_str = now_ist.strftime("%Y-%m-%dT%H:00")
+        # Find closest past time index
         idx = 0
         for i, t in enumerate(times):
             if t <= now_str:
@@ -299,7 +302,10 @@ def _template_explain(drivers: list, category: str) -> str:
 
 # ── Main handler ───────────────────────────────────────────────────────────────
 def handler(event, context):
-    print(f"Event: {json.dumps(event)}")
+    # Log request metadata only — never the full event body (may contain PII / query params)
+    http_method = event.get("httpMethod", "UNKNOWN")
+    source_ip = (event.get("requestContext") or {}).get("identity", {}).get("sourceIp", "?")
+    print(f"Request: {http_method} /estimate from {source_ip}")
 
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
@@ -365,9 +371,12 @@ def handler(event, context):
         else:
             import lambda_inference as li
             pm25, drivers, confidence, nearest_km = li.predict(features)
+        inference_mode = "xgboost"
 
     except Exception as e:
-        print(f"Prediction pipeline failed: {e}")
+        import traceback
+        print(f"Prediction pipeline failed: {type(e).__name__}: {e}")
+        print(traceback.format_exc())
         # Graceful fallback — use IDW from stations if available
         station_feats = nearest_station_features(lat, lon) if "station_feats" not in dir() else station_feats
         weather = fetch_live_weather(lat, lon) if "weather" not in dir() else weather
@@ -437,6 +446,7 @@ def handler(event, context):
 
         drivers.sort(key=lambda d: abs(d["shap"]), reverse=True)
         drivers = drivers[:3]
+        inference_mode = "idw_fallback"
 
     category = pm25_to_category(pm25)
     explanation, advice, source = bedrock_explain(drivers, category, confidence)
@@ -450,6 +460,7 @@ def handler(event, context):
         "explanation":       explanation,
         "advice":            advice,
         "explanation_source":source,
+        "inference_mode":    inference_mode if 'inference_mode' in dir() else "unknown",
         "lat":               lat,
         "lon":               lon,
         "timestamp":         timestamp,

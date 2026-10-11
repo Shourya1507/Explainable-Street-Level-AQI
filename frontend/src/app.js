@@ -350,20 +350,35 @@ function renderConfidenceDots(level) {
 }
 
 // ── Driver bars ──────────────────────────────────────────────────────────────
+/** Escape user/API-supplied strings before inserting into innerHTML */
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function renderDrivers(drivers) {
   if (!els.driverList) return;
   if (!drivers || !drivers.length) { els.driverList.innerHTML = ""; return; }
   const maxShap = Math.max(...drivers.map(d => Math.abs(d.shap)));
   els.driverList.innerHTML = drivers.map(d => {
     const pct = Math.round((Math.abs(d.shap) / maxShap) * 100);
-    const label = d.note || d.feature.replace(/_/g, " ");
+    const label = escHtml(d.note || d.feature.replace(/_/g, " "));
+    // Show sign correctly: negative SHAP means the factor *reduces* PM2.5
+    const shapDisplay = d.shap >= 0
+      ? `+${Math.round(d.shap)}`
+      : `−${Math.round(Math.abs(d.shap))}`;
+    const barClass = d.shap >= 0 ? "driver-bar" : "driver-bar driver-bar--negative";
     return `
       <div class="driver-item" role="listitem">
         <span class="driver-name" title="${label}">${label}</span>
         <div class="driver-bar-wrap" role="presentation">
-          <div class="driver-bar" style="width:${pct}%" aria-label="${pct}%"></div>
+          <div class="${barClass}" style="width:${pct}%" aria-label="${pct}%"></div>
         </div>
-        <span class="driver-shap">+${Math.round(d.shap)}</span>
+        <span class="driver-shap">${shapDisplay}</span>
       </div>`;
   }).join("");
 }
@@ -422,6 +437,16 @@ function renderResult(data) {
   if (els.explanationText) els.explanationText.textContent = explanationText || "Explanation not available.";
   if (els.explanationCard) els.explanationCard.setAttribute("lang", isHindi ? "hi" : "en");
   if (els.sourceTag) els.sourceTag.hidden = data.explanation_source !== "fallback";
+
+  // Show/hide fallback mode indicator
+  const fallbackBadge = document.getElementById("inference-mode-badge");
+  if (fallbackBadge) {
+    const isFallback = data.inference_mode === "idw_fallback";
+    fallbackBadge.hidden = !isFallback;
+    fallbackBadge.textContent = isFallback
+      ? (isHindi ? "⚠ IDW अनुमान (ML उपलब्ध नहीं)" : "⚠ Fallback mode — IDW interpolation, not ML")
+      : "";
+  }
 
   // Drivers
   renderDrivers(data.drivers);

@@ -83,13 +83,13 @@ def predict(features: dict) -> tuple:
         raise
 
     FEATURE_COLS = [
-        # "nearby_station_avg", "nearby_station_idw", "neighbor_spread",
-        # "nearest_station_km", 
+        "nearby_station_avg", "nearby_station_idw", "neighbor_spread",
+        "nearest_station_km",
         "temperature", "humidity", "wind_speed",
         "wind_direction", "surface_pressure", "boundary_layer",
         "road_density", "hour_of_day", "day_of_week", "month",
         "is_weekend", "is_morning_peak", "is_evening_peak",
-        # "fire_count", "aod",
+        # "fire_count", "aod",  # Tier 6 – not yet in production data
     ]
 
     model = _load_model()

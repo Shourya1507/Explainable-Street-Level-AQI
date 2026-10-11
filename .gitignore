@@ -17,6 +17,8 @@ model_output/
 
 # AWS
 infra/packaged.yaml
+.aws-sam/
+*.zip
 .aws/
 
 # Secrets — NEVER commit

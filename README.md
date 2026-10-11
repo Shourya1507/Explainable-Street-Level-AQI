@@ -21,7 +21,7 @@ All inference runs entirely on AWS — no external AI APIs, no client-side ML.
 | Feature | Status | Tier | Notes |
 |---|---|---|---|
 | Click-to-estimate PM2.5 with confidence and drivers | ✅ Live | 1 | Real-time ML inference & CPCB categories |
-| XGBoost model trained on real PM2.5 readings | ✅ Live | 1 | Trained on station data + weather features |
+| XGBoost model trained on real PM2.5 readings | ✅ Live | 1 | Trained on station data + weather + spatial neighbour features |
 | Delhi NCT-exclusive map bounding | ✅ Live | 1 | Locked to Delhi (`minZoom 10.2`, pan-bounds, boundary outline) |
 | Interactive Delhi place search & autocomplete | ✅ Live | 1 | 30+ Delhi landmarks, metro hubs & localities |
 | Quick Delhi hotspot chips | ✅ Live | 1 | 1-click estimates for CP, India Gate, Dwarka, Rohini, etc. |
@@ -35,7 +35,7 @@ All inference runs entirely on AWS — no external AI APIs, no client-side ML.
 | Delhi Regional Zone selector | ✅ Live | 10 | Central, South, North, East, West Delhi & IGI Airport |
 | 48-hour XGBoost forecast | ✅ Live | 5 | Multi-step temporal prediction with diurnal curve & confidence intervals |
 | City-wide PM2.5 heatmap grid | ✅ Live | 6 | Spatial grid interpolation layer across Delhi NCT |
-| Lowest-exposure route (Amazon Location Service) | ✅ Live | 7 | Clean-air walking, cycling & driving route comparisons |
+| Lowest-exposure route planner | ✅ Live | 7 | Clean-air walking, cycling & driving route comparisons |
 
 ---
 
@@ -52,7 +52,7 @@ All inference runs entirely on AWS — no external AI APIs, no client-side ML.
 - **Bilingual Interface (EN / हिं)**: Instant language toggle with localized headings, metrics, category chips, and translated advice.
 - **Voice Playback ("Listen")**: Accessible audio button providing spoken explanations and health advice in Hindi or English.
 - **Resident Profile & Alerts**: Modal for residents to save frequent locations (Home, Work, School) and configure alerts when AQI reaches Poor, Very Poor, or Severe.
-- **Accuracy & Evaluation**: Interactive modal presenting XGBoost RMSE (18.4 µg/m³) vs persistence baseline (27.6 µg/m³), MAE, and top predictive features.
+- **Accuracy & Evaluation**: Interactive modal presenting XGBoost performance metrics vs persistence baseline, MAE, and top predictive features.
 
 ---
 
@@ -63,7 +63,7 @@ All inference runs entirely on AWS — no external AI APIs, no client-side ML.
 | [OpenAQ](https://openaq.org) | PM2.5 readings, Delhi CPCB stations | CC BY 4.0, original data from CPCB India |
 | [Open-Meteo](https://open-meteo.com) | Hourly weather — temp, humidity, wind, BLH | Open-Meteo free tier, ERA5/ECMWF |
 | [OpenStreetMap / Overpass](https://openstreetmap.org) | Road density within 1 km radius & basemap tiles | © OSM contributors, ODbL |
-| [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) | Active fire counts (Tier 6) | NASA FIRMS, MODIS/VIIRS |
+| [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) | Active fire counts (planned Tier 6 extension) | NASA FIRMS, MODIS/VIIRS |
 | [MapLibre GL JS](https://maplibre.org) | Map rendering in browser | BSD-2-Clause |
 | [Amazon Bedrock](https://aws.amazon.com/bedrock/) | Claude 3 Haiku explanation generation | AWS Commercial |
 
@@ -99,6 +99,7 @@ No proprietary datasets. No sensitive credentials are committed to this reposito
                                      │ (warm lambda cache)
                             ┌────────▼────────────┐
                             │ XGBoost + SHAP      │
+                            │ (Lambda Layer)      │
                             └────────┬────────────┘
                                      │
                             ┌────────▼────────────┐
@@ -114,18 +115,47 @@ DATA PIPELINE (offline → S3):
 
 ---
 
-## Model evaluation
+## Model
+
+### Features (17 total, train & serve are identical)
+
+| Group | Feature | Description |
+|---|---|---|
+| **Spatial** | `nearby_station_avg` | IDW-averaged PM2.5 from nearest 5 CPCB stations |
+| **Spatial** | `nearby_station_idw` | Inverse-distance-weighted station reading |
+| **Spatial** | `neighbor_spread` | Std-dev of nearby station readings (local variance) |
+| **Spatial** | `nearest_station_km` | Distance to closest station (drives confidence band) |
+| Weather | `temperature` | 2m air temperature (°C) |
+| Weather | `humidity` | Relative humidity (%) |
+| Weather | `wind_speed` | Wind speed at 10m (m/s) |
+| Weather | `wind_direction` | Wind direction (°) |
+| Weather | `surface_pressure` | Sea-level pressure (hPa) |
+| Weather | `boundary_layer` | Planetary boundary layer height (m) |
+| Land use | `road_density` | OSM road network density within 1km (km) |
+| Temporal | `hour_of_day` | Hour 0–23 |
+| Temporal | `day_of_week` | Day 0–6 |
+| Temporal | `month` | Month 1–12 |
+| Temporal | `is_weekend` | Binary |
+| Temporal | `is_morning_peak` | 07–10 h |
+| Temporal | `is_evening_peak` | 17–20 h |
+
+### Training & Evaluation
 
 | Metric | Value | Notes |
 |---|---|---|
-| Method | Leave-one-station-out CV & Time-split | Evaluated across 15 monitoring stations |
-| Data window | Sept–Oct 2026 | 15 CPCB Delhi monitoring stations |
-| **Model RMSE** | **18.4 µg/m³** | XGBoost on weather + road density + neighbor signals |
-| Persistence baseline RMSE | 27.6 µg/m³ | 33% reduction in prediction error |
-| **Model MAE** | **14.1 µg/m³** | Mean absolute error |
-| Top features | Nearby station average (36%), Wind speed (22%), Road density (15%) | Local dispersion & traffic density |
+| Method | Leave-one-station-out CV | Evaluated across all CPCB Delhi stations in dataset |
+| Fallback | 80/20 time-split | Used when dataset has only 1 station |
+| **Model RMSE** | Reported in `eval_results.json` | XGBoost on all 17 features |
+| Persistence baseline RMSE | Reported in `eval_results.json` | Nearest-station persistence |
+| Top features | Reported in `feature_importance.json` | SHAP-derived feature importances |
 
-> Our model uses weather, geography, and surrounding station readings, enabling street-level spatial interpolation to any Delhi point — which single-station persistence cannot do.
+> RMSE figures are generated at training time and stored in `s3://aqi-models-{account}/nowcast/eval_results.json`. Run `train_nowcast.py --upload` to regenerate.
+
+### Inference transparency
+
+The `/estimate` response includes an `inference_mode` field:
+- `"xgboost"` — model loaded from S3 and SHAP values computed
+- `"idw_fallback"` — XGBoost unavailable (missing Lambda Layer or model not uploaded); estimate uses IDW from live station readings. The UI shows a **⚠ Fallback mode** badge.
 
 ---
 
@@ -135,11 +165,12 @@ DATA PIPELINE (offline → S3):
 |---|---|
 | **Amazon S3** | Raw data, Parquet features, model artifacts, static frontend hosting |
 | **AWS Lambda** | `/estimate` and `/stations` serverless inference |
+| **Lambda Layer** | xgboost, shap, pandas, numpy (build with `infra/build_lambda_layer.sh`) |
 | **Amazon API Gateway** | REST API with rate-limiting, throttling, and CORS |
 | **Amazon DynamoDB** | 1-hour TTL cache for estimate responses |
 | **Amazon Bedrock** | Claude 3 Haiku — plain-language AQI explanation |
 | **Amazon Location Service / OSM** | Map rendering & Delhi spatial boundaries |
-| **AWS IAM** | Least-privilege roles per Lambda execution |
+| **AWS IAM** | Least-privilege roles per Lambda; Bedrock scoped to specific model ARN |
 | **Amazon CloudWatch** | Error-rate and latency monitoring |
 | **AWS SAM / CloudFormation** | Infrastructure as Code |
 
@@ -151,6 +182,7 @@ DATA PIPELINE (offline → S3):
 - AWS CLI v2 with configured profile (`ap-south-1`)
 - AWS SAM CLI
 - Python 3.12+
+- Docker (for building the Lambda Layer)
 
 ### Running the Frontend Locally
 
@@ -160,12 +192,20 @@ python3 -m http.server 8080 --directory frontend/src
 # Open http://localhost:8080/index.html in your browser
 ```
 
+### Build & Deploy Lambda Layer (first-time setup for real ML)
+
+```bash
+chmod +x infra/build_lambda_layer.sh
+./infra/build_lambda_layer.sh
+# Outputs the Layer ARN — copy it for the next step
+```
+
 ### Backend deploy (AWS SAM)
 
 ```bash
 cd infra
 sam build --template-file template.yaml
-sam deploy
+sam deploy --parameter-overrides MlLayerArn=<layer-arn-from-above>
 ```
 
 The API Gateway URL is printed as `ApiUrl` in the stack outputs.
@@ -196,6 +236,8 @@ python build_features.py --city delhi --upload
 cd backend/ml
 pip install -r requirements-ml.txt
 python train_nowcast.py --upload
+# For quick iteration without leave-one-station-out CV:
+python train_nowcast.py --skip-cv --upload
 ```
 
 ---
@@ -203,12 +245,14 @@ python train_nowcast.py --upload
 ## Limits (honest)
 
 - Estimates are from a model trained on government monitoring-station data. They are **model estimates, not calibrated physical sensor measurements**.
-- Delhi has a finite number of CPCB monitoring stations. Accuracy decreases at points far from any station.
+- Delhi has a finite number of CPCB monitoring stations. Accuracy decreases at points far from any station (confidence drops to "low" beyond 8 km).
 - The data window is bounded by OpenAQ archive availability and the pull date.
 - SHAP values describe feature contributions to the model prediction, not absolute verified physical causation.
+- The road density feature is computed once per station from OSM Overpass at feature-build time. It is a static approximation, not real-time traffic.
+- When the Lambda ML layer is not deployed, the system automatically falls back to IDW interpolation from live station readings; the response and UI both label this as `inference_mode: idw_fallback`.
 
 ---
 
 ## No keys in this repo
 
-All API keys and cloud credentials are stored in AWS Secrets Manager or Lambda environment variables only. The frontend makes no direct calls to private third-party APIs.
+All API keys and cloud credentials are stored in AWS Secrets Manager or Lambda environment variables only. The frontend makes no direct calls to private third-party APIs. Build artifacts (`*.zip`, `.aws-sam/`) are gitignored.
