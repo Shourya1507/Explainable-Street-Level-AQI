@@ -78,7 +78,10 @@ def main():
                         help="OpenAQ API key to inject into Lambda env vars")
     args = parser.parse_args()
 
-    sess = boto3.Session(profile_name=PROFILE, region_name=REGION)
+    try:
+        sess = boto3.Session(profile_name=PROFILE, region_name=REGION)
+    except Exception:
+        sess = boto3.Session(region_name=REGION)
     lam = sess.client("lambda")
 
     # ── Deploy aqi-estimate ───────────────────────────────────────────────────
