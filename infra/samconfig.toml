@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name        = "aqi-backend"
+s3_bucket         = "aqi-models-991166714312"
+s3_prefix         = "sam-packages"
+region            = "ap-south-1"
+confirm_changeset = false
+capabilities      = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+no_fail_on_empty_changeset = true
+parameter_overrides = "AccountId=991166714312 MockMode=true"
+
+[default.build.parameters]
+use_container = false

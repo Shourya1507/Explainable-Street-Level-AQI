@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# Data (never commit raw data or model artifacts)
+data_pull/
+features/
+model_output/
+*.parquet
+*.ubj
+*.pkl
+*.csv.gz
+
+# AWS
+infra/packaged.yaml
+.aws/
+
+# Secrets — NEVER commit
+*.pem
+*.key
+secrets.json
+.env.local
+
+# Frontend build
+frontend/dist/
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp

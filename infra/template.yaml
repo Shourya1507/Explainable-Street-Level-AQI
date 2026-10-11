@@ -1,0 +1,241 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Explainable Street-Level AQI — Backend Stack
+  Tier 0 (mock) → Tier 1+ (real model)
+  Region: ap-south-1
+
+Parameters:
+  AccountId:
+    Type: String
+    Default: "991166714312"
+  MockMode:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+  SageMakerEndpoint:
+    Type: String
+    Default: ""
+    Description: "Set after model is deployed in Tier 1"
+  BedrockModelId:
+    Type: String
+    Default: "anthropic.claude-3-haiku-20240307-v1:0"
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        MOCK_MODE: !Ref MockMode
+        AWS_ACCOUNT_ID: !Ref AccountId
+        DYNAMODB_CACHE_TABLE: !Ref CacheTable
+        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        SAGEMAKER_ENDPOINT: !Ref SageMakerEndpoint
+        STATIONS_S3_BUCKET: !Sub "aqi-features-${AccountId}"
+
+# ── IAM Roles ────────────────────────────────────────────────────────────────
+Resources:
+
+  EstimateFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: aqi-estimate-lambda-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: aqi-estimate-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # DynamoDB cache
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource: !GetAtt CacheTable.Arn
+              # Bedrock invoke
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                Resource: "*"
+              # SageMaker invoke endpoint
+              - Effect: Allow
+                Action:
+                  - sagemaker:InvokeEndpoint
+                Resource: !Sub "arn:aws:sagemaker:ap-south-1:${AccountId}:endpoint/*"
+              # S3 features read
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::aqi-features-${AccountId}/*"
+
+  StationsFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: aqi-stations-lambda-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: aqi-stations-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:aws:s3:::aqi-features-${AccountId}/stations/*"
+
+# ── DynamoDB Cache Table ──────────────────────────────────────────────────────
+  CacheTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: aqi-cache
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+# ── Lambda Functions ──────────────────────────────────────────────────────────
+  EstimateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aqi-estimate
+      CodeUri: ../backend/lambda/estimate/
+      Handler: handler.handler
+      Role: !GetAtt EstimateFunctionRole.Arn
+      Events:
+        EstimatePost:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AqiApi
+            Path: /estimate
+            Method: POST
+        EstimateOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AqiApi
+            Path: /estimate
+            Method: OPTIONS
+
+  StationsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aqi-stations
+      CodeUri: ../backend/lambda/stations/
+      Handler: handler.handler
+      Role: !GetAtt StationsFunctionRole.Arn
+      Events:
+        StationsGet:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AqiApi
+            Path: /stations
+            Method: GET
+        StationsOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AqiApi
+            Path: /stations
+            Method: OPTIONS
+
+# ── API Gateway ───────────────────────────────────────────────────────────────
+  AqiApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: aqi-api
+      StageName: dev
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          ThrottlingBurstLimit: 50
+          ThrottlingRateLimit: 20
+
+# ── CloudWatch Alarms ─────────────────────────────────────────────────────────
+  EstimateErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: aqi-estimate-errors
+      AlarmDescription: "/estimate Lambda error rate above threshold"
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Dimensions:
+        - Name: FunctionName
+          Value: aqi-estimate
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 5
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+
+  EstimateLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: aqi-estimate-latency
+      AlarmDescription: "/estimate p99 latency above 5 seconds"
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Dimensions:
+        - Name: FunctionName
+          Value: aqi-estimate
+      ExtendedStatistic: p99
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5000
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+
+# ── Billing Alarm (in us-east-1 — required by AWS) ───────────────────────────
+# NOTE: Billing alarms must be set in us-east-1. Run this separately:
+# aws cloudwatch put-metric-alarm \
+#   --alarm-name aqi-billing-alarm \
+#   --alarm-description "AQI project billing threshold" \
+#   --metric-name EstimatedCharges \
+#   --namespace AWS/Billing \
+#   --dimensions Name=Currency,Value=USD \
+#   --statistic Maximum --period 86400 \
+#   --evaluation-periods 1 --threshold 10 \
+#   --comparison-operator GreaterThanThreshold \
+#   --region us-east-1
+
+# ── Outputs ───────────────────────────────────────────────────────────────────
+Outputs:
+  ApiUrl:
+    Description: "API Gateway URL (dev stage)"
+    Value: !Sub "https://${AqiApi}.execute-api.ap-south-1.amazonaws.com/dev"
+    Export:
+      Name: aqi-api-url-dev
+
+  CacheTableArn:
+    Description: "DynamoDB cache table ARN"
+    Value: !GetAtt CacheTable.Arn
+
+  EstimateFunctionArn:
+    Description: "Estimate Lambda ARN"
+    Value: !GetAtt EstimateFunction.Arn

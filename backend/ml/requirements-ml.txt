@@ -1,0 +1,8 @@
+pandas>=2.0
+numpy>=1.26
+xgboost>=2.0
+shap>=0.44
+boto3>=1.35
+pyarrow>=14.0
+scikit-learn>=1.4
+requests>=2.31

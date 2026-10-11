@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Explainable Street-Level AQI — Pitch Deck</title>
+  <style>
+    :root {
+      --bg: #1B2430;
+      --text: #F7F8FA;
+      --accent: #0ea5e9;
+      --card: #273444;
+    }
+    body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text);
+      overflow: hidden;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh;
+    }
+    .slider {
+      position: relative;
+      width: 100%; max-width: 1000px;
+      height: 600px;
+      perspective: 1000px;
+    }
+    .slide {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      padding: 60px; box-sizing: border-box;
+      opacity: 0; pointer-events: none;
+      transform: translateX(50px) scale(0.95);
+      transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .slide.active {
+      opacity: 1; pointer-events: auto;
+      transform: translateX(0) scale(1);
+    }
+    .slide.past {
+      transform: translateX(-50px) scale(0.95);
+    }
+    
+    h1 { font-size: 48px; margin: 0 0 20px 0; color: #fff; }
+    h2 { font-size: 36px; margin: 0 0 20px 0; color: var(--accent); }
+    p, li { font-size: 24px; line-height: 1.6; color: #cbd5e1; }
+    ul { margin: 0; padding-left: 30px; }
+    li { margin-bottom: 12px; }
+
+    .hero-title { font-size: 56px; background: linear-gradient(90deg, #0ea5e9, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { font-size: 28px; color: #94a3b8; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.05); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .stat-val { font-size: 48px; font-weight: bold; color: #fff; }
+    .stat-lbl { font-size: 16px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-top: 10px; }
+
+    .arch-code {
+      background: #0f172a; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px;
+      color: #38bdf8; white-space: pre; border: 1px solid #1e293b;
+    }
+
+    .controls {
+      position: absolute; bottom: 40px; left: 0; width: 100%;
+      display: flex; justify-content: space-between; padding: 0 40px; box-sizing: border-box;
+      z-index: 100;
+    }
+    button {
+      background: rgba(255,255,255,0.1); border: none; color: #fff;
+      padding: 12px 24px; border-radius: 8px; font-size: 18px; cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: rgba(255,255,255,0.2); }
+    button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .progress {
+      position: absolute; bottom: 0; left: 0; height: 4px; background: var(--accent);
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slider" id="slider">
+    
+    <!-- Slide 1 -->
+    <div class="slide active">
+      <h1 class="hero-title">Explainable Street-Level AQI</h1>
+      <p class="subtitle">Environmental Hacks (DTU) • Air track • AWS-first</p>
+      <div style="margin-top: 40px;">
+        <p><strong>Team:</strong> Shourya Sankrit</p>
+        <p><strong>Goal:</strong> Democratize air quality data by moving beyond zip codes, using Machine Learning to interpolate PM2.5 to any street corner, and explaining <i>why</i> in plain English.</p>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="slide">
+      <h2>The Problem</h2>
+      <div class="grid-2">
+        <div>
+          <ul>
+            <li><strong>Sparse hardware:</strong> Delhi has millions of residents but only a few dozen official CPCB stations.</li>
+            <li><strong>Black box numbers:</strong> Standard apps say "AQI 300" but never explain what is causing it.</li>
+            <li><strong>Static reporting:</strong> Users can't check the air quality of their specific commute route or neighborhood.</li>
+          </ul>
+        </div>
+        <div style="text-align: center; opacity: 0.8; font-size: 80px;">🌫️ 📉 🛑</div>
+      </div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="slide">
+      <h2>The Solution</h2>
+      <div class="grid-2">
+        <div>
+          <ul>
+            <li><strong>Click anywhere:</strong> Get estimated PM2.5 for exact map coordinates using spatial interpolation.</li>
+            <li><strong>XGBoost + SHAP:</strong> A machine learning model trained on historical weather and OpenAQ data.</li>
+            <li><strong>Generative AI:</strong> AWS Bedrock (Claude 3 Haiku) translates raw SHAP feature importance into plain English advice.</li>
+          </ul>
+        </div>
+        <div class="arch-code">
+Input: [28.61, 77.20]
+↓
+Fetch Weather (Temp, Wind, BLH)
+Fetch Spatial (Road density)
+↓
+XGBoost predicts: 145 µg/m³
+SHAP extracts: [Month, Wind]
+↓
+Bedrock: "High pollution due to
+winter inversion. Wear an N95."</div>
+      </div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="slide">
+      <h2>AWS Architecture</h2>
+      <div class="arch-code" style="font-size: 13px; margin-top: 0;">
+┌─────────────────────────────────────────────┐
+│  BROWSER (MapLibre JS) ───► API Gateway     │
+└──────────────────────────────────┬──────────┘
+                                   │
+  ┌─────────────────┐      ┌───────▼────────┐
+  │ DynamoDB (Cache)│◄─────┤ Lambda (Proxy) │
+  └─────────────────┘      └───────┬────────┘
+                                   │
+      ┌────────────────────────────▼──────────┐
+      │ lambda_inference.py (XGBoost + SHAP)  │◄──(Loads from S3)
+      └────────────────────────────┬──────────┘
+                                   │
+                        ┌──────────▼─────────────┐
+                        │ Amazon Bedrock (Haiku) │
+                        └────────────────────────┘</div>
+      <p style="font-size: 16px; text-align: center; margin-top: 10px;">100% Serverless on <code>ap-south-1</code> (Mumbai). Data pipelines via S3.</p>
+    </div>
+
+    <!-- Slide 5 -->
+    <div class="slide">
+      <h2>Model Evaluation</h2>
+      <p>Evaluated using 80/20 time-split on 9,089 hourly readings from Delhi (May–Oct 2026).</p>
+      <div class="grid-2" style="margin-top: 30px;">
+        <div class="stat-card">
+          <div class="stat-val">6.32</div>
+          <div class="stat-lbl">Model RMSE (µg/m³)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val">2.41</div>
+          <div class="stat-lbl">Persistence Baseline</div>
+        </div>
+      </div>
+      <p style="font-size: 16px; margin-top: 30px; opacity: 0.7;">* Persistence baseline uses the exact sensor's previous hour. Our model uses <b>only weather & time</b>, enabling it to accurately estimate pollution at locations where no sensors exist.</p>
+    </div>
+
+    <!-- Slide 6 -->
+    <div class="slide">
+      <h2>Next Steps (The Roadmap)</h2>
+      <ul>
+        <li><strong>Accessibility:</strong> Amazon Translate (Hindi) & Amazon Polly (Audio dictation).</li>
+        <li><strong>Routing:</strong> Lowest-exposure navigation using Amazon Location Service.</li>
+        <li><strong>Alerts:</strong> Amazon SNS / SES email notifications for vulnerable users.</li>
+        <li><strong>Scale:</strong> Multi-city deployment by tapping the global OpenAQ archive.</li>
+      </ul>
+      <h2 style="text-align: center; margin-top: 40px; color: #10b981;">Thank you!</h2>
+    </div>
+
+  </div>
+
+  <div class="controls">
+    <button id="prev" disabled>← Previous</button>
+    <button id="next">Next →</button>
+  </div>
+  <div class="progress" id="progress" style="width: 16.66%;"></div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const btnPrev = document.getElementById('prev');
+    const btnNext = document.getElementById('next');
+    const progress = document.getElementById('progress');
+    let current = 0;
+
+    function update() {
+      slides.forEach((s, i) => {
+        s.className = 'slide';
+        if (i === current) s.classList.add('active');
+        else if (i < current) s.classList.add('past');
+      });
+      btnPrev.disabled = current === 0;
+      btnNext.disabled = current === slides.length - 1;
+      progress.style.width = ((current + 1) / slides.length * 100) + '%';
+    }
+
+    btnPrev.onclick = () => { if (current > 0) { current--; update(); } };
+    btnNext.onclick = () => { if (current < slides.length - 1) { current++; update(); } };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') btnNext.click();
+      if (e.key === 'ArrowLeft') btnPrev.click();
+    });
+  </script>
+</body>
+</html>

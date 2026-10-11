@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AQI Delhi — Explainable Street-Level Air Quality</title>
+  <meta name="description" content="Estimate PM2.5 at any point in Delhi with confidence, top drivers, and plain-language explanation. Powered by AWS." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- MapLibre GL JS for Amazon Location Service -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+</head>
+<body>
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="app-header" role="banner">
+    <div class="header-left">
+      <button class="city-selector" id="city-selector" aria-haspopup="listbox" aria-expanded="false">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path d="M10 2C6.686 2 4 4.686 4 8c0 4.5 6 10 6 10s6-5.5 6-10c0-3.314-2.686-6-6-6z"/>
+          <circle cx="10" cy="8" r="2"/>
+        </svg>
+        <span id="city-name">Delhi</span>
+        <svg class="icon chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path d="M5 8l5 5 5-5"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="header-center">
+      <div class="search-wrap">
+        <svg class="icon search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+          <circle cx="9" cy="9" r="5"/><path d="M15 15l-3-3"/>
+        </svg>
+        <input type="text" id="place-search" class="search-input" placeholder="Search a place in Delhi" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="lang-toggle" role="group" aria-label="Language">
+        <button class="lang-btn active" id="lang-en" data-lang="en">EN</button>
+        <button class="lang-btn" id="lang-hi" data-lang="hi">हिं</button>
+      </div>
+      <button class="sign-in-btn" id="sign-in-btn">Sign in</button>
+    </div>
+  </header>
+
+  <!-- ── Main layout ─────────────────────────────────────────────────────── -->
+  <main class="app-main" role="main">
+
+    <!-- Map container -->
+    <div class="map-container" id="map-container">
+      <div id="map" aria-label="Delhi air quality map"></div>
+
+      <!-- Map hint -->
+      <div class="map-hint" id="map-hint" role="status">
+        <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+          <circle cx="10" cy="10" r="7"/><path d="M10 7v4"/><circle cx="10" cy="13.5" r=".5" fill="currentColor"/>
+        </svg>
+        Tap anywhere on the map for an estimate
+      </div>
+
+      <!-- Time selector -->
+      <div class="time-bar" role="group" aria-label="Time selector">
+        <button class="time-btn" id="time-prev" aria-label="Previous hour">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M13 5l-5 5 5 5"/>
+          </svg>
+        </button>
+        <span class="time-label" id="time-display">18:00, 10 Oct</span>
+        <button class="time-btn" id="time-next" aria-label="Next hour">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M7 5l5 5-5 5"/>
+          </svg>
+        </button>
+        <button class="time-now-btn" id="time-now">Now</button>
+      </div>
+
+      <!-- Legend -->
+      <div class="legend" id="legend" aria-label="Air quality categories">
+        <div class="legend-title">PM2.5 (µg/m³)</div>
+        <div class="legend-items">
+          <div class="legend-item"><span class="legend-dot" style="background:#3FA45B"></span><span>Good 0-30</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#8DBF3F"></span><span>Satisfactory 31-60</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#E8C220"></span><span>Moderate 61-90</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#F08A24"></span><span>Poor 91-120</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#E04F39"></span><span>Very Poor 121-250</span></div>
+          <div class="legend-item"><span class="legend-dot" style="background:#9B2257"></span><span>Severe 250+</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Side Panel ──────────────────────────────────────────────────────── -->
+    <aside class="side-panel" id="side-panel" aria-label="Estimate results">
+
+      <!-- Empty / initial state -->
+      <div class="panel-state panel-empty" id="panel-empty">
+        <svg class="empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="24" cy="24" r="20"/>
+          <path d="M24 16v10l6 4"/>
+        </svg>
+        <p class="empty-text">Click or tap anywhere on the Delhi map to get an estimated PM2.5, confidence level, and the top three reasons for the reading.</p>
+      </div>
+
+      <!-- Loading skeleton -->
+      <div class="panel-state panel-loading" id="panel-loading" hidden>
+        <div class="skeleton skeleton-hero"></div>
+        <div class="skeleton skeleton-chip"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row short"></div>
+        <div class="skeleton skeleton-section"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row short"></div>
+      </div>
+
+      <!-- Result state -->
+      <div class="panel-state panel-result" id="panel-result" hidden>
+
+        <!-- Estimate card -->
+        <div class="estimate-card" id="estimate-card">
+          <div class="estimate-header">
+            <div>
+              <div class="estimate-label">Estimated PM2.5</div>
+              <div class="estimate-value" id="pm25-value">—</div>
+              <div class="estimate-unit">µg/m³</div>
+            </div>
+            <div class="category-chip" id="category-chip">—</div>
+          </div>
+          <div class="model-label">Model estimate, not a measurement</div>
+        </div>
+
+        <!-- Confidence badge -->
+        <div class="confidence-badge" id="confidence-badge">
+          <div class="confidence-dots" id="confidence-dots"></div>
+          <div class="confidence-info">
+            <span class="confidence-level" id="confidence-level">—</span> confidence
+            <span class="confidence-dist" id="confidence-dist">· nearest station — km</span>
+          </div>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <!-- Why section -->
+        <section class="panel-section" aria-labelledby="why-heading">
+          <h2 class="section-heading" id="why-heading">Why</h2>
+
+          <!-- Explanation text -->
+          <div class="explanation-card" id="explanation-card">
+            <p class="explanation-text" id="explanation-text">—</p>
+            <span class="source-tag" id="source-tag" hidden>Template</span>
+          </div>
+
+          <!-- Driver bars -->
+          <div class="driver-list" id="driver-list" role="list" aria-label="Top contributing factors">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <div class="panel-divider"></div>
+
+        <!-- What to do section -->
+        <section class="panel-section" aria-labelledby="advice-heading">
+          <h2 class="section-heading" id="advice-heading">What to do</h2>
+          <p class="advice-text" id="advice-text">—</p>
+          <button class="listen-btn" id="listen-btn" hidden>
+            <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+              <polygon points="6,4 16,10 6,16"/>
+            </svg>
+            Listen
+          </button>
+        </section>
+
+        <div class="panel-divider"></div>
+
+        <!-- Accuracy link -->
+        <div class="accuracy-link-row">
+          <span class="accuracy-caption">Model estimate, not a measurement.</span>
+          <button class="accuracy-link" id="accuracy-link">How accurate is this? →</button>
+        </div>
+
+      </div>
+
+      <!-- Error state -->
+      <div class="panel-state panel-error" id="panel-error" hidden>
+        <div class="error-banner">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <circle cx="10" cy="10" r="7"/><path d="M10 7v4"/><circle cx="10" cy="14" r=".5" fill="currentColor"/>
+          </svg>
+          <span id="error-message">Something went wrong. Please try again.</span>
+        </div>
+        <button class="retry-btn" id="retry-btn">Try again</button>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- ── Accuracy Modal ─────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="accuracy-overlay" role="dialog" aria-modal="true" aria-labelledby="accuracy-title" hidden>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 class="modal-title" id="accuracy-title">How accurate is this?</h2>
+        <button class="modal-close" id="accuracy-close" aria-label="Close">
+          <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M5 5l10 10M15 5L5 15"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Headline -->
+        <p class="eval-headline" id="eval-headline">Loading evaluation data…</p>
+
+        <!-- Metric cards row -->
+        <div class="eval-metrics-row" id="eval-metrics-row">
+          <div class="eval-metric-card">
+            <div class="eval-metric-label">Model RMSE</div>
+            <div class="eval-metric-value" id="eval-model-rmse">—</div>
+            <div class="eval-metric-unit">µg/m³</div>
+          </div>
+          <div class="eval-metric-card highlight">
+            <div class="eval-metric-label">vs Nearest-Station</div>
+            <div class="eval-metric-value" id="eval-nn-rmse">—</div>
+            <div class="eval-metric-unit">µg/m³ baseline</div>
+          </div>
+          <div class="eval-metric-card">
+            <div class="eval-metric-label">Model MAE</div>
+            <div class="eval-metric-value" id="eval-model-mae">—</div>
+            <div class="eval-metric-unit">µg/m³</div>
+          </div>
+        </div>
+
+        <!-- RMSE comparison bar chart -->
+        <div class="eval-section">
+          <h3 class="eval-section-title">RMSE comparison (lower is better)</h3>
+          <div class="eval-bar-chart" id="eval-bar-chart">
+            <div class="eval-bar-row">
+              <span class="eval-bar-label">XGBoost model</span>
+              <div class="eval-bar-track"><div class="eval-bar model-bar" id="bar-model" style="width:0%"></div></div>
+              <span class="eval-bar-val" id="bar-model-val">—</span>
+            </div>
+            <div class="eval-bar-row">
+              <span class="eval-bar-label">Nearest station</span>
+              <div class="eval-bar-track"><div class="eval-bar baseline-bar" id="bar-nn" style="width:0%"></div></div>
+              <span class="eval-bar-val" id="bar-nn-val">—</span>
+            </div>
+            <div class="eval-bar-row">
+              <span class="eval-bar-label">IDW interpolation</span>
+              <div class="eval-bar-track"><div class="eval-bar baseline-bar" id="bar-idw" style="width:0%"></div></div>
+              <span class="eval-bar-val" id="bar-idw-val">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature importance -->
+        <div class="eval-section">
+          <h3 class="eval-section-title">Top prediction signals</h3>
+          <div class="feat-imp-list" id="feat-imp-list">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <!-- Limits -->
+        <div class="limits-block">
+          <h3 class="limits-title">Limits &amp; caveats</h3>
+          <ul class="limits-list" id="limits-list">
+            <li>Estimated from <span id="station-count">—</span> monitoring station(s) in Delhi</li>
+            <li>Training data window: <span id="data-window">—</span></li>
+            <li>Accuracy is lower at locations far from any station</li>
+            <li>Values are model estimates, not calibrated sensor measurements</li>
+            <li>Evaluation method: leave-one-station-out cross-validation</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
