@@ -1,6 +1,6 @@
 /**
  * AQI Delhi — front-end application
- * Tier 0: calls /estimate (mocked) and /stations (mocked) from API Gateway
+ * Tier 1+: calls live /estimate and /stations endpoints from API Gateway.
  * All API calls go through the backend — no AWS credentials in this file.
  */
 
@@ -49,6 +49,8 @@ const state = {
   lang: "en",
   lastResult: null,
   retryFn: null,
+  stationsSource: null,     // "live" | "s3_cache" | "mock" | "fallback"
+  stationsLoadedAt: null,   // Date when stations were last loaded
 };
 
 // Round Date to current hour
@@ -153,6 +155,18 @@ function renderDrivers(drivers) {
   }).join("");
 }
 
+// ── Live data badge ───────────────────────────────────────────────────────────
+function updateLiveBadge(source) {
+  const badge = document.getElementById("live-badge");
+  if (!badge) return;
+  const isLive = source && source !== "mock";
+  badge.textContent = isLive ? "● LIVE DATA" : "○ MOCK DATA";
+  badge.style.color = isLive ? "#3FA45B" : "#F08A24";
+  badge.title = isLive
+    ? `Station data source: ${source}. Updated at ${state.stationsLoadedAt?.toLocaleTimeString() || "now"}.`
+    : "Stations are using mock/hardcoded data. Deploy in real mode for live readings.";
+}
+
 // ── Render result ────────────────────────────────────────────────────────────
 function renderResult(data) {
   state.lastResult = data;
@@ -172,6 +186,14 @@ function renderResult(data) {
   els.confidenceDist.textContent = data.nearest_station_km
     ? `· nearest station ${data.nearest_station_km.toFixed(1)} km`
     : "";
+
+  // Show if result is from real model or mock
+  const sourceBadge = document.getElementById("estimate-source-badge");
+  if (sourceBadge) {
+    const isMock = data.explanation_source === "mock";
+    sourceBadge.textContent = isMock ? "MOCK ESTIMATE" : "ML ESTIMATE";
+    sourceBadge.style.opacity = isMock ? "1" : "0";
+  }
 
   // Explanation
   const isHindi = state.lang === "hi";
@@ -230,16 +252,36 @@ async function fetchEstimate() {
   }
 }
 
-async function fetchStations(map) {
+let _stationMarkers = [];
+
+async function fetchStations(map, forceRefresh = false) {
   try {
-    const resp = await fetch(`${CONFIG.API_BASE}/stations?city=delhi`);
+    const url = `${CONFIG.API_BASE}/stations?city=delhi${forceRefresh ? "&refresh=true" : ""}`;
+    const resp = await fetch(url);
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
-    renderStationMarkers(map, data.stations || []);
+    const stations = data.stations || [];
+    state.stationsSource = data.source || "unknown";
+    state.stationsLoadedAt = new Date();
+    // Remove old markers
+    _stationMarkers.forEach(m => m.remove());
+    _stationMarkers = [];
+    renderStationMarkers(map, stations);
+    updateLiveBadge(state.stationsSource);
+    console.log(`Stations loaded: ${stations.length} from source=${data.source}`);
   } catch (err) {
     console.warn("Stations fetch failed:", err);
     // Non-fatal — map still usable without markers
+    updateLiveBadge("error");
   }
+}
+
+// Auto-refresh stations every 30 minutes
+function scheduleStationRefresh(map) {
+  setInterval(() => {
+    console.log("Auto-refreshing station data...");
+    fetchStations(map, false);
+  }, 30 * 60 * 1000);
 }
 
 // ── Map ──────────────────────────────────────────────────────────────────────
@@ -273,28 +315,52 @@ function initMap() {
 
   mapInstance.on("load", () => {
     fetchStations(mapInstance);
+    scheduleStationRefresh(mapInstance);
+    // Auto-select Central Delhi (Connaught Place) so Why & Advice sections are active immediately on load
+    selectLocation(28.6315, 77.2167, false);
   });
 
   mapInstance.on("click", e => {
-    const { lat, lng } = e.lngLat;
-    state.selectedLat = lat;
-    state.selectedLon = lng;
-
-    // Move / create pin
-    if (selectedPin) {
-      selectedPin.setLngLat([lng, lat]);
-    } else {
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:20px;height:20px;border-radius:50%;
-        background:var(--accent);border:3px solid #fff;
-        box-shadow:0 0 0 3px var(--accent-tint), var(--shadow-float);
-      `;
-      selectedPin = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapInstance);
-    }
-
-    fetchEstimate();
+    selectLocation(e.lngLat.lat, e.lngLat.lng, false);
   });
+}
+
+function selectLocation(lat, lon, fly = false) {
+  state.selectedLat = lat;
+  state.selectedLon = lon;
+
+  if (fly && mapInstance) {
+    mapInstance.flyTo({ center: [lon, lat], zoom: Math.max(mapInstance.getZoom(), 12) });
+  }
+
+  // Move / create pin
+  if (selectedPin) {
+    selectedPin.setLngLat([lon, lat]);
+  } else if (mapInstance) {
+    const el = document.createElement("div");
+    el.style.cssText = `
+      width:20px;height:20px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 0 0 3px var(--accent-tint), var(--shadow-float);
+    `;
+    selectedPin = new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(mapInstance);
+  }
+
+  fetchEstimate();
+}
+
+function formatUpdated(isoStr) {
+  if (!isoStr) return "";
+  try {
+    const d = new Date(isoStr);
+    const now = new Date();
+    const diffMin = Math.round((now - d) / 60000);
+    if (diffMin < 2)  return "just now";
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24)   return `${diffH}h ago`;
+    return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  } catch { return isoStr.slice(0, 16); }
 }
 
 function renderStationMarkers(map, stations) {
@@ -304,18 +370,36 @@ function renderStationMarkers(map, stations) {
     el.className = "station-marker";
     el.style.background = meta.tint;
     el.style.borderColor = meta.fill;
-    el.title = `${st.name}: ${st.pm25 ? st.pm25.toFixed(0) + " µg/m³" : "no data"}`;
-    el.setAttribute("role", "img");
+    // Show PM2.5 value inside the marker dot
+    el.textContent = st.pm25 ? Math.round(st.pm25) : "?";
+    el.style.color = meta.text;
+    el.style.fontSize = "9px";
+    el.style.fontWeight = "700";
+    el.style.display = "flex";
+    el.style.alignItems = "center";
+    el.style.cursor = "pointer";
+    el.title = `${st.name}: ${st.pm25 ? st.pm25.toFixed(0) + " µg/m³" : "no data"} (Click to inspect street-level estimate)`;
+    el.setAttribute("role", "button");
     el.setAttribute("aria-label", `${st.name} station, ${st.category || "unknown"} air quality`);
 
-    new maplibregl.Marker({ element: el })
+    el.addEventListener("click", () => {
+      selectLocation(st.lat, st.lon, false);
+    });
+
+    const isLive = st.source && st.source !== "mock";
+    const popup = new maplibregl.Popup({ offset: 14 }).setHTML(`
+      <strong style="font-size:13px">${st.name}</strong><br>
+      <span style="font-size:18px;font-weight:700;color:${meta.fill}">${st.pm25 ? st.pm25.toFixed(0) : "—"} µg/m³</span><br>
+      <span style="background:${meta.tint};color:${meta.text};padding:2px 6px;border-radius:4px;font-size:11px">${st.category || "Unknown"}</span>
+      <br><small style="color:#5B6675">Updated: ${formatUpdated(st.updated)}
+      ${isLive ? " · <span style='color:#3FA45B'>●&nbsp;live</span>" : ""}</small>
+    `);
+
+    const marker = new maplibregl.Marker({ element: el })
       .setLngLat([st.lon, st.lat])
-      .setPopup(new maplibregl.Popup({ offset: 14 }).setHTML(`
-        <strong>${st.name}</strong><br>
-        ${st.pm25 ? `${st.pm25.toFixed(0)} µg/m³ · ${st.category}` : "No recent data"}<br>
-        <small style="color:#5B6675">${st.updated || ""}</small>
-      `))
+      .setPopup(popup)
       .addTo(map);
+    _stationMarkers.push(marker);
   });
 }
 
@@ -495,4 +579,7 @@ if (!CONFIG.FEATURES.hindi) {
   els.listenBtn.hidden = true;
 }
 
-console.log("AQI Delhi — Tier 0 running. API:", CONFIG.API_BASE);
+// Initialize the live badge (will update when stations load)
+updateLiveBadge(null);
+
+console.log("AQI Delhi — Live mode running. API:", CONFIG.API_BASE);

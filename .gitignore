@@ -33,3 +33,7 @@ node_modules/
 .vscode/
 .idea/
 *.swp
+
+# Markdown files (keep only README.md)
+*.md
+!README.md

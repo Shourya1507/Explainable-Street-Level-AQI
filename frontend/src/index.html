@@ -78,6 +78,15 @@
         <button class="time-now-btn" id="time-now">Now</button>
       </div>
 
+      <!-- Live data badge -->
+      <div id="live-badge" style="
+        position:absolute;bottom:108px;left:12px;z-index:10;
+        font-size:10px;font-weight:700;letter-spacing:.04em;
+        padding:3px 8px;border-radius:20px;
+        background:rgba(255,255,255,0.92);box-shadow:0 1px 4px rgba(0,0,0,.15);
+        color:#888;cursor:default;user-select:none;
+      " title="Data source status">○ Loading…</div>
+
       <!-- Legend -->
       <div class="legend" id="legend" aria-label="Air quality categories">
         <div class="legend-title">PM2.5 (µg/m³)</div>
