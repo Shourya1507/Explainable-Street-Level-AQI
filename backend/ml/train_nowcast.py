@@ -27,7 +27,8 @@ except ImportError:
     sys.exit(1)
 
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-MODELS_BUCKET = os.environ.get("MODELS_BUCKET", "aqi-models-991166714312")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}")
 
 # Feature columns for the model (must match build_features.py)
 FEATURE_COLS = [

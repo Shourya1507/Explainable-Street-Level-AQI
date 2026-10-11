@@ -19,10 +19,10 @@ import json
 import os
 import boto3
 
-REGION = "ap-south-1"
-PROFILE = "Shourya Sankrit"
-ACCOUNT_ID = "991166714312"
-STACK_NAME = "aqi-backend"
+REGION = os.environ.get("AWS_REGION", "ap-south-1")
+PROFILE = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+STACK_NAME = os.environ.get("STACK_NAME", "aqi-backend")
 FRONTEND_BUCKET = f"aqi-frontend-{ACCOUNT_ID}"
 MODELS_BUCKET = f"aqi-models-{ACCOUNT_ID}"
 

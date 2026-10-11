@@ -15,12 +15,16 @@ import io
 import os
 import math
 import logging
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 logger = logging.getLogger(__name__)
 
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-MODELS_BUCKET = os.environ.get("MODELS_BUCKET", "aqi-models-991166714312")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}")
 MODEL_KEY = os.environ.get("MODEL_KEY", "nowcast/nowcast_model.ubj")
 
 # ── Feature columns — MUST match train_nowcast.py exactly ─────────────────────

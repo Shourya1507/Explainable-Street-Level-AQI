@@ -12,16 +12,18 @@ import urllib.parse
 import boto3
 from datetime import datetime, timezone
 
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
 MOCK_MODE = os.environ.get("MOCK_MODE", "true").lower() == "true"
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-STATIONS_S3_BUCKET = os.environ.get("STATIONS_S3_BUCKET", "aqi-features-991166714312")
+STATIONS_S3_BUCKET = os.environ.get("STATIONS_S3_BUCKET", f"aqi-features-{ACCOUNT_ID}")
 STATIONS_S3_KEY    = os.environ.get("STATIONS_S3_KEY",    "stations/delhi_latest.json")
 OPENAQ_API_KEY     = os.environ.get("OPENAQ_API_KEY", "")
+ALLOWED_ORIGIN     = os.environ.get("ALLOWED_ORIGIN", "*")
 
 CORS_HEADERS = {
     "Content-Type": "application/json",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+    "Access-Control-Allow-Headers": "Content-Type,X-Api-Key,Authorization",
     "Access-Control-Allow-Methods": "GET,OPTIONS",
 }
 

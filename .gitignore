@@ -18,8 +18,10 @@ model_output/
 # AWS
 infra/packaged.yaml
 .aws-sam/
+infra/.aws-sam/
 *.zip
 .aws/
+backend/lambda/**/package
 
 # Secrets — NEVER commit
 *.pem

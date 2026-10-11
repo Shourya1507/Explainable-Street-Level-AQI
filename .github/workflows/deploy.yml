@@ -11,8 +11,30 @@ permissions:
   contents: read    # Required for actions/checkout
 
 jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy boto3
+
+      - name: Execute Test Suite
+        run: |
+          python tests/run_tests.py
+
   deploy:
     name: Deploy Frontend & Lambdas
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -52,14 +74,16 @@ jobs:
 
       - name: Deploy Backend Lambdas
         if: steps.aws-auth.outcome == 'success'
+        env:
+          ML_LAYER_ARN: ${{ secrets.ML_LAYER_ARN }}
         run: |
           python backend/deploy_real_mode.py
 
-      - name: AWS Credentials Diagnostics
+      - name: AWS Credentials Diagnostics & Failure
         if: steps.aws-auth.outcome != 'success'
         run: |
           echo "=========================================================================="
-          echo "ℹ️  AWS Authentication Notice:"
+          echo "❌ AWS Authentication Failed:"
           echo "Could not assume role: arn:aws:iam::991166714312:role/github-actions-aqi-deploy-role"
           echo ""
           echo "To enable automated CI/CD deployments on git push:"
@@ -67,3 +91,4 @@ jobs:
           echo "   This provisions the GitHub Actions OIDC provider and deploy role in AWS."
           echo "2. Alternatively, set repository secrets AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY."
           echo "=========================================================================="
+          exit 1

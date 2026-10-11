@@ -19,9 +19,9 @@ from datetime import datetime, timezone
 
 import boto3
 
-PROFILE    = "Shourya Sankrit"
-REGION     = "ap-south-1"
-ACCOUNT_ID = "991166714312"
+PROFILE    = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
+REGION     = os.environ.get("AWS_REGION", "ap-south-1")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
 MODELS_BUCKET   = f"aqi-models-{ACCOUNT_ID}"
 FEATURES_BUCKET = f"aqi-features-{ACCOUNT_ID}"
 

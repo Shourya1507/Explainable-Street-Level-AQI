@@ -9,10 +9,10 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-PROFILE = "Shourya Sankrit"
-REGION = "ap-south-1"
-ACCOUNT_ID = "991166714312"
-REPO = "Shourya1507/Explainable-Street-Level-AQI"
+PROFILE = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
+REGION = os.environ.get("AWS_REGION", "ap-south-1")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+REPO = os.environ.get("GITHUB_REPOSITORY", "Shourya1507/Explainable-Street-Level-AQI")
 ROLE_NAME = "github-actions-aqi-deploy-role"
 OIDC_URL = "https://token.actions.githubusercontent.com"
 AUDIENCE = "sts.amazonaws.com"
@@ -117,11 +117,22 @@ def main():
                 "Action": [
                     "lambda:UpdateFunctionCode",
                     "lambda:UpdateFunctionConfiguration",
-                    "lambda:GetFunctionConfiguration"
+                    "lambda:GetFunctionConfiguration",
+                    "lambda:GetFunction"
                 ],
                 "Resource": [
                     f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:function:aqi-estimate",
                     f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:function:aqi-stations"
+                ]
+            },
+            {
+                "Sid": "LambdaLayerAccess",
+                "Effect": "Allow",
+                "Action": [
+                    "lambda:GetLayerVersion"
+                ],
+                "Resource": [
+                    f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:layer:*"
                 ]
             }
         ]

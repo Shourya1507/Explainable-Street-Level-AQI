@@ -11,7 +11,7 @@
 #   bash infra/build_lambda_layer.sh
 #
 # Requires: Docker, AWS CLI (for upload step)
-# Output: infra/lambda_layer.zip  (~60 MB zipped, ~130 MB unzipped)
+# Output: infra/lambda_layer.zip  (~25 MB zipped, ~79 MB unzipped)
 
 set -euo pipefail
 
@@ -36,11 +36,9 @@ docker run --rm --platform linux/amd64 \
   --entrypoint bash \
   -v "${SCRIPT_DIR}:/out" \
   "public.ecr.aws/lambda/python:${PYTHON_VERSION}" -c "
-    set -euo pipefail
-    # Install zip (not present in the Lambda base image)
-    yum install -y zip --quiet 2>/dev/null || apt-get install -y zip -qq 2>/dev/null || true
-
+    # Install with --no-deps to prevent pulling in scipy (~110 MB unneeded)
     pip install \
+      --no-deps \
       'xgboost-cpu>=2.0.3' \
       'numpy>=1.26.0' \
       --target /tmp/python \
@@ -53,8 +51,8 @@ docker run --rm --platform linux/amd64 \
     find /tmp/python -name '*.dist-info' -type d -exec rm -rf {} + 2>/dev/null || true
     find /tmp/python -name '*.pyi' -delete 2>/dev/null || true
 
-    cd /tmp
-    zip -r9q /out/lambda_layer.zip python/
+    # Create archive using Python standard library (no external zip/yum/microdnf needed)
+    python3 -c "import shutil; shutil.make_archive('/out/lambda_layer', 'zip', root_dir='/tmp', base_dir='python')"
     echo 'Layer zipped successfully.'
   "
 

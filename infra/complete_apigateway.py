@@ -7,18 +7,21 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 
 import boto3, json
 
-REGION     = "ap-south-1"
-PROFILE    = "Shourya Sankrit"
-ACCOUNT_ID = "991166714312"
-API_ID     = "6diafyett2"
-ROOT_ID    = "kvbxkt82d4"
-EST_ID     = "mad1vd"   # /estimate resource already exists with POST
+REGION     = os.environ.get("AWS_REGION", "ap-south-1")
+PROFILE    = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+API_ID     = os.environ.get("API_ID", "6diafyett2")
+ROOT_ID    = os.environ.get("ROOT_ID", "kvbxkt82d4")
+EST_ID     = os.environ.get("EST_ID", "mad1vd")   # /estimate resource already exists with POST
 
 ESTIMATE_LAMBDA_ARN = f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:function:aqi-estimate"
 STATIONS_LAMBDA_ARN = f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:function:aqi-stations"
 
 def session():
-    return boto3.Session(profile_name=PROFILE, region_name=REGION)
+    try:
+        return boto3.Session(profile_name=PROFILE, region_name=REGION)
+    except Exception:
+        return boto3.Session(region_name=REGION)
 
 def grant(lam_client, fn_name, method, path_segment, sid_suffix):
     try:

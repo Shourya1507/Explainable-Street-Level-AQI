@@ -20,7 +20,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-RAW_BUCKET = os.environ.get("RAW_BUCKET", "aqi-raw-991166714312")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+RAW_BUCKET = os.environ.get("RAW_BUCKET", f"aqi-raw-{ACCOUNT_ID}")
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
 
 # OpenAQ S3 public archive

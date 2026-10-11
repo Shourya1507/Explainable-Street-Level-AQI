@@ -31,8 +31,9 @@ except ImportError:
     sys.exit(1)
 
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-FEATURES_BUCKET = os.environ.get("FEATURES_BUCKET", "aqi-features-991166714312")
-RAW_BUCKET = os.environ.get("RAW_BUCKET", "aqi-raw-991166714312")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+FEATURES_BUCKET = os.environ.get("FEATURES_BUCKET", f"aqi-features-{ACCOUNT_ID}")
+RAW_BUCKET = os.environ.get("RAW_BUCKET", f"aqi-raw-{ACCOUNT_ID}")
 
 
 # ── Weather fetch (Open-Meteo — no key needed) ────────────────────────────────
@@ -313,9 +314,13 @@ def main():
             print(f"Error reading {f.name}: {e}")
             
     pm25_df = pd.concat(df_list, ignore_index=True)
-    pm25_df['datetime'] = pd.to_datetime(pm25_df['datetime']).dt.tz_convert(None) # Make timezone-naive UTC
+    # Convert PM2.5 timestamps to IST (Asia/Kolkata) to match Open-Meteo local weather & Delhi peak traffic hours
+    dt_series = pd.to_datetime(pm25_df['datetime'])
+    if dt_series.dt.tz is None:
+        dt_series = dt_series.dt.tz_localize('UTC')
+    pm25_df['datetime'] = dt_series.dt.tz_convert('Asia/Kolkata').dt.tz_localize(None)
     
-    print(f"Loaded {len(pm25_df)} PM2.5 readings for {len(station_coords)} stations.")
+    print(f"Loaded {len(pm25_df)} PM2.5 readings for {len(station_coords)} stations (converted to IST).")
     
     # Compute road density and fetch weather for each station
     weather_df = {}
@@ -329,8 +334,9 @@ def main():
         print(f"Fetching Open-Meteo weather for station {sid} ({lat}, {lon})")
         try:
             wdf = fetch_weather_for_station(lat, lon, start_date, end_date)
-            # Remove tz info for joining
-            wdf['datetime'] = wdf['datetime'].dt.tz_localize(None)
+            # Open-Meteo was requested in Asia/Kolkata; ensure timezone-naive for join
+            if wdf['datetime'].dt.tz is not None:
+                wdf['datetime'] = wdf['datetime'].dt.tz_localize(None)
             weather_df[sid] = wdf
         except Exception as e:
             print(f"Weather fetch failed for {sid}: {e}")

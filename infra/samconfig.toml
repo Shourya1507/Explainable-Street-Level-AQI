@@ -8,7 +8,7 @@ region            = "ap-south-1"
 confirm_changeset = false
 capabilities      = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
 no_fail_on_empty_changeset = true
-parameter_overrides = "AccountId=991166714312 MockMode=true"
+parameter_overrides = "AccountId=991166714312 MockMode=false MlLayerArn=\"\""
 
 [default.build.parameters]
 use_container = false

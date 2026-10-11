@@ -165,8 +165,8 @@ The `/estimate` response includes an `inference_mode` field:
 |---|---|
 | **Amazon S3** | Raw data, Parquet features, model artifacts, static frontend hosting |
 | **AWS Lambda** | `/estimate` and `/stations` serverless inference |
-| **Lambda Layer** | xgboost, shap, pandas, numpy (build with `infra/build_lambda_layer.sh`) |
-| **Amazon API Gateway** | REST API with rate-limiting, throttling, and CORS |
+| **Lambda Layer** | `xgboost-cpu`, `numpy` (native Tree SHAP via `pred_contribs`; built with `infra/build_lambda_layer.sh`) |
+| **Amazon API Gateway** | REST API with rate-limiting, throttling, input validation, and CORS |
 | **Amazon DynamoDB** | 1-hour TTL cache for estimate responses |
 | **Amazon Bedrock** | Claude 3 Haiku — plain-language AQI explanation |
 | **Amazon Location Service / OSM** | Map rendering & Delhi spatial boundaries |
@@ -240,6 +240,14 @@ python train_nowcast.py --upload
 python train_nowcast.py --skip-cv --upload
 ```
 
+### Running Tests
+
+Execute the unit test suite covering input validation, IST timezone handling, road density interpolation, and inference features:
+
+```bash
+python tests/run_tests.py
+```
+
 ---
 
 ## Limits (honest)
@@ -248,7 +256,7 @@ python train_nowcast.py --skip-cv --upload
 - Delhi has a finite number of CPCB monitoring stations. Accuracy decreases at points far from any station (confidence drops to "low" beyond 8 km).
 - The data window is bounded by OpenAQ archive availability and the pull date.
 - SHAP values describe feature contributions to the model prediction, not absolute verified physical causation.
-- The road density feature is computed once per station from OSM Overpass at feature-build time. It is a static approximation, not real-time traffic.
+- The road density feature uses a spatial inverse-distance weighting model across Delhi urban nodes. It is an infrastructure approximation, not real-time traffic volume.
 - When the Lambda ML layer is not deployed, the system automatically falls back to IDW interpolation from live station readings; the response and UI both label this as `inference_mode: idw_fallback`.
 
 ---
@@ -256,3 +264,9 @@ python train_nowcast.py --skip-cv --upload
 ## No keys in this repo
 
 All API keys and cloud credentials are stored in AWS Secrets Manager or Lambda environment variables only. The frontend makes no direct calls to private third-party APIs. Build artifacts (`*.zip`, `.aws-sam/`) are gitignored.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

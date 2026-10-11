@@ -10,18 +10,21 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="repla
 import boto3
 import json
 
-REGION = "ap-south-1"
-PROFILE = "Shourya Sankrit"
-ACCOUNT_ID = "991166714312"
-API_ID = "6diafyett2"
-ROOT_RESOURCE_ID = "kvbxkt82d4"
+REGION = os.environ.get("AWS_REGION", "ap-south-1")
+PROFILE = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+API_ID = os.environ.get("API_ID", "6diafyett2")
+ROOT_RESOURCE_ID = os.environ.get("ROOT_RESOURCE_ID", "kvbxkt82d4")
 
 ESTIMATE_LAMBDA_ARN = f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:function:aqi-estimate"
 STATIONS_LAMBDA_ARN = f"arn:aws:lambda:{REGION}:{ACCOUNT_ID}:function:aqi-stations"
 
 
 def get_clients():
-    session = boto3.Session(profile_name=PROFILE, region_name=REGION)
+    try:
+        session = boto3.Session(profile_name=PROFILE, region_name=REGION)
+    except Exception:
+        session = boto3.Session(region_name=REGION)
     return session.client("apigateway"), session.client("lambda")
 
 
