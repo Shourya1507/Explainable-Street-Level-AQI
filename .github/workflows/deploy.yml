@@ -1,0 +1,43 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # Required for AWS OIDC authentication
+  contents: read    # Required for actions/checkout
+
+jobs:
+  deploy:
+    name: Deploy Frontend & Lambdas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::991166714312:role/github-actions-aqi-deploy-role
+          aws-region: ap-south-1
+
+      - name: Deploy Frontend to S3 Website
+        run: |
+          aws s3 sync frontend/src/ s3://aqi-frontend-991166714312/ --delete
+
+      - name: Deploy Backend Lambdas
+        run: |
+          python backend/deploy_real_mode.py
