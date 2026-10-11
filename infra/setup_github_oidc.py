@@ -23,7 +23,10 @@ THUMBPRINTS = [
 ]
 
 def main():
-    sess = boto3.Session(profile_name=PROFILE, region_name=REGION)
+    try:
+        sess = boto3.Session(profile_name=PROFILE, region_name=REGION)
+    except Exception:
+        sess = boto3.Session(region_name=REGION)
     iam = sess.client("iam")
 
     provider_arn = f"arn:aws:iam::{ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
@@ -60,7 +63,10 @@ def main():
                         "token.actions.githubusercontent.com:aud": AUDIENCE
                     },
                     "StringLike": {
-                        "token.actions.githubusercontent.com:sub": f"repo:{REPO}:*"
+                        "token.actions.githubusercontent.com:sub": [
+                            f"repo:{REPO}:*",
+                            f"repo:{REPO.lower()}:*"
+                        ]
                     }
                 }
             }
@@ -97,6 +103,7 @@ def main():
                     "s3:PutObject",
                     "s3:GetObject",
                     "s3:ListBucket",
+                    "s3:GetBucketLocation",
                     "s3:DeleteObject"
                 ],
                 "Resource": [

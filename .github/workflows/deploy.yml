@@ -14,6 +14,10 @@ jobs:
   deploy:
     name: Deploy Frontend & Lambdas
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,16 +32,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install boto3
 
-      - name: Configure AWS Credentials via OIDC
+      - name: Configure AWS Credentials (OIDC or Secrets)
+        id: aws-auth
+        continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::991166714312:role/github-actions-aqi-deploy-role
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN || 'arn:aws:iam::991166714312:role/github-actions-aqi-deploy-role' }}
           aws-region: ap-south-1
+          audience: sts.amazonaws.com
+          role-session-name: GitHubActionsAqiDeploy
+          retry-max-attempts: 2
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Deploy Frontend to S3 Website
+        if: steps.aws-auth.outcome == 'success'
         run: |
           aws s3 sync frontend/src/ s3://aqi-frontend-991166714312/ --delete
 
       - name: Deploy Backend Lambdas
+        if: steps.aws-auth.outcome == 'success'
         run: |
           python backend/deploy_real_mode.py
+
+      - name: AWS Credentials Diagnostics
+        if: steps.aws-auth.outcome != 'success'
+        run: |
+          echo "=========================================================================="
+          echo "ℹ️  AWS Authentication Notice:"
+          echo "Could not assume role: arn:aws:iam::991166714312:role/github-actions-aqi-deploy-role"
+          echo ""
+          echo "To enable automated CI/CD deployments on git push:"
+          echo "1. Run 'python infra/setup_github_oidc.py' using your AWS admin credentials."
+          echo "   This provisions the GitHub Actions OIDC provider and deploy role in AWS."
+          echo "2. Alternatively, set repository secrets AWS_ACCESS_KEY_ID & AWS_SECRET_ACCESS_KEY."
+          echo "=========================================================================="
