@@ -81,7 +81,7 @@ MOCK_RESPONSE = {
     "explanation_source": "mock",
 }
 
-ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
 ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 API_KEY = os.environ.get("API_KEY", "")
 

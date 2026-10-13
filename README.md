@@ -11,7 +11,7 @@ A web app where a user **clicks any point on a Delhi map** and instantly gets:
 
 All inference runs entirely on AWS — no external AI APIs, no client-side ML.
 
-**Live demo:** `https://aqi-frontend-991166714312.s3.ap-south-1.amazonaws.com/index.html`  
+**Live demo:** `https://aqi-frontend-<account>.s3.ap-south-1.amazonaws.com/index.html`  
 **API endpoint:** `https://6diafyett2.execute-api.ap-south-1.amazonaws.com/dev`
 
 ---
@@ -143,13 +143,18 @@ DATA PIPELINE (offline → S3):
 
 | Metric | Value | Notes |
 |---|---|---|
-| Method | Leave-one-station-out CV | Evaluated across all CPCB Delhi stations in dataset |
-| Fallback | 80/20 time-split | Used when dataset has only 1 station |
-| **Model RMSE** | Reported in `eval_results.json` | XGBoost on all 17 features |
-| Persistence baseline RMSE | Reported in `eval_results.json` | Nearest-station persistence |
+| Method | Leave-one-station-out CV (LOSO) | Each station held out once; remaining 14 train |
+| Stations | 15 CPCB Delhi stations | May–Oct 2026; 744 test hours per station |
+| Total predictions | 11,160 | Across all 15 LOSO folds |
+| **Model RMSE** | **24.65 µg/m³** | XGBoost on all 17 features |
+| **Nearest-station (NN) baseline** | 22.54 µg/m³ | Raw reading from closest station |
+| **IDW baseline** | 22.51 µg/m³ | Inverse-distance-weighted station average |
+| Model MAE | 18.58 µg/m³ | Mean absolute error across all folds |
 | Top features | Reported in `feature_importance.json` | SHAP-derived feature importances |
 
-> RMSE figures are generated at training time and stored in `s3://aqi-models-{account}/nowcast/eval_results.json`. Run `train_nowcast.py --upload` to regenerate.
+> **Per-station note**: The model beats both baselines on 11 of 15 stations (e.g. Dwarka: 12.08 vs NN 23.09). The four stations where it trails (R3G, Shadipur, Wazirpur, Pusa) are co-located within 1–1.5 km of a neighbour, so the nearest-station shortcut is hard to beat there.
+>
+> Full results are stored in `model_output/eval_results.json` and `s3://aqi-models-{account}/nowcast/eval_results.json`. Run `train_nowcast.py --upload` to regenerate.
 
 ### Inference transparency
 
@@ -214,7 +219,7 @@ The API Gateway URL is printed as `ApiUrl` in the stack outputs.
 
 Upload the web application bundle to S3:
 ```bash
-aws s3 sync frontend/src/ s3://aqi-frontend-991166714312/ --profile "Shourya Sankrit"
+aws s3 sync frontend/src/ s3://aqi-frontend-${AWS_ACCOUNT_ID}/ --profile your-aws-profile
 ```
 
 ### Data pipeline

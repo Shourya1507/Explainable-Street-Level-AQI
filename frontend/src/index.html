@@ -318,6 +318,7 @@
               <h3 class="forecast-title">48-Hour Air Quality Outlook</h3>
               <span class="forecast-subtitle" id="forecast-location-name">Selected Location</span>
             </div>
+            <span class="data-mode-badge" title="48-hour projection uses a client-side diurnal cycle model seeded from the XGBoost nowcast. Delhi stations only.">&#9679; Diurnal model &middot; Delhi-only</span>
           </div>
 
           <!-- Forecast Stats Cards -->
@@ -519,7 +520,7 @@
       <div class="modal-header">
         <div class="route-title-wrap">
           <h2 class="modal-title" id="route-title">Clean Route Planner</h2>
-          <span class="route-subtitle">Lowest-exposure commute routing</span>
+          <span class="route-subtitle">Lowest-exposure commute routing &nbsp;<span class="data-mode-badge" title="Route PM2.5 estimates use IDW interpolation from Delhi monitoring stations. Geometry is illustrative, not a live map API.">&#9679; IDW model &middot; Delhi nodes only</span></span>
         </div>
         <button class="modal-close" id="route-close" aria-label="Close">
           <svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75">

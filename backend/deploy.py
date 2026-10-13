@@ -15,10 +15,10 @@ import json
 
 STACK_NAME = os.environ.get("STACK_NAME", "aqi-backend")
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-PROFILE = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
-ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
-FRONTEND_BUCKET = f"aqi-frontend-{ACCOUNT_ID}"
-MODELS_BUCKET = f"aqi-models-{ACCOUNT_ID}"
+PROFILE = os.environ.get("AWS_PROFILE", "")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
+FRONTEND_BUCKET = os.environ.get("FRONTEND_BUCKET", f"aqi-frontend-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-frontend")
+MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-models")
 
 
 def run(cmd: list, cwd: str = None, check: bool = True) -> subprocess.CompletedProcess:

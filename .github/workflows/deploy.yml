@@ -26,7 +26,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy
+          pip install numpy xgboost
 
       - name: Execute Test Suite
         run: |
@@ -71,7 +71,6 @@ jobs:
       - name: Configure AWS Credentials (Access Keys)
         if: steps.auth-check.outputs.auth_mode == 'keys'
         id: aws-auth-keys
-        continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -81,7 +80,6 @@ jobs:
       - name: Configure AWS Credentials (Custom OIDC Role)
         if: steps.auth-check.outputs.auth_mode == 'oidc_custom'
         id: aws-auth-oidc
-        continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -96,7 +94,7 @@ jobs:
         continue-on-error: true
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::991166714312:role/github-actions-aqi-deploy-role
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-aqi-deploy-role
           aws-region: ap-south-1
           audience: sts.amazonaws.com
           role-session-name: GitHubActionsAqiDeploy
@@ -104,6 +102,7 @@ jobs:
 
       - name: Evaluate Authentication
         id: auth-eval
+        if: always()
         run: |
           if [ "${{ steps.aws-auth-keys.outcome }}" = "success" ] || \
              [ "${{ steps.aws-auth-oidc.outcome }}" = "success" ] || \
@@ -118,7 +117,7 @@ jobs:
       - name: Deploy Frontend to S3 Website
         if: steps.auth-eval.outputs.ready == 'true'
         run: |
-          aws s3 sync frontend/src/ s3://aqi-frontend-991166714312/ --delete
+          aws s3 sync frontend/src/ s3://aqi-frontend-${{ vars.AWS_ACCOUNT_ID }}/ --delete
 
       - name: Deploy Backend Lambdas
         if: steps.auth-eval.outputs.ready == 'true'

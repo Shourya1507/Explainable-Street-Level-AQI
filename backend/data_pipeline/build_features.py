@@ -31,9 +31,9 @@ except ImportError:
     sys.exit(1)
 
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
-FEATURES_BUCKET = os.environ.get("FEATURES_BUCKET", f"aqi-features-{ACCOUNT_ID}")
-RAW_BUCKET = os.environ.get("RAW_BUCKET", f"aqi-raw-{ACCOUNT_ID}")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
+FEATURES_BUCKET = os.environ.get("FEATURES_BUCKET", f"aqi-features-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-features")
+RAW_BUCKET = os.environ.get("RAW_BUCKET", f"aqi-raw-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-raw")
 
 
 # ── Weather fetch (Open-Meteo — no key needed) ────────────────────────────────
@@ -71,32 +71,45 @@ def fetch_weather_for_station(lat: float, lon: float, start: str, end: str) -> p
     return df
 
 
-# ── Road density helper (static, computed once per point from OSM) ────────────
+# ── Road density model (calibrated from OpenStreetMap nodes matching inference) ──
+ROAD_DENSITY_NODES = [
+    (28.6304, 77.2177, 16.5),  # Connaught Place
+    (28.6289, 77.2407, 17.2),  # ITO / Ring Road / Delhi Gate
+    (28.6506, 77.2303, 15.0),  # Chandni Chowk / Old Delhi
+    (28.6514, 77.1907, 14.2),  # Karol Bagh / Pusa Road
+    (28.5677, 77.2433, 13.8),  # Lajpat Nagar / Ring Road South
+    (28.5494, 77.2528, 14.5),  # Nehru Place / Outer Ring Road
+    (28.6469, 77.3160, 15.5),  # Anand Vihar / ISBT East
+    (28.7159, 77.1147, 7.8),   # Rohini Sector 1-16
+    (28.5921, 77.0460, 8.2),   # Dwarka Sector 6-10
+    (28.5562, 77.1000, 9.5),   # IGI Airport / Aerocity
+    (28.5355, 77.2732, 11.2),  # Okhla Industrial Area
+    (28.8530, 77.0930, 3.8),   # Narela / Outer North
+    (28.6092, 76.9798, 3.2),   # Najafgarh / Rural West
+    (28.4680, 77.2450, 2.1),   # Asola Bhatti / Southern Ridge
+    (28.6600, 77.2600, 3.5),   # Yamuna Floodplains
+]
+
 def compute_road_density(lat: float, lon: float, radius_m: float = 1000) -> float:
     """
-    Approximate road density using Overpass API.
-    Returns estimated road length in km within radius.
-    For speed, this is computed once and cached in S3.
+    Interpolate road density in km/km² using Inverse Distance Weighting (IDW)
+    across verified Delhi OSM road network nodes.
+    Matches backend/lambda/estimate/handler.py road_density_for exactly.
     """
-    try:
-        # Overpass API query: count road way lengths around point
-        overpass_url = "https://overpass-api.de/api/interpreter"
-        query = f"""
-[out:json][timeout:10];
-way(around:{radius_m},{lat},{lon})["highway"];
-out geom;
-"""
-        headers = {'User-Agent': 'AQIDelhiApp/1.0 (contact@example.com)'}
-        resp = requests.post(overpass_url, data={'data': query}, headers=headers, timeout=15)
-        resp.raise_for_status()
-        ways = resp.json().get("elements", [])
-        # Rough length estimate: count of nodes as proxy
-        total_nodes = sum(len(w.get("geometry", [])) for w in ways)
-        # Each node ~50m apart on average for urban roads
-        return round(total_nodes * 0.05, 2)  # km
-    except Exception as e:
-        print(f"  Road density failed for ({lat},{lon}): {e}")
-        return 0.0
+    weights = []
+    values = []
+    for n_lat, n_lon, dens in ROAD_DENSITY_NODES:
+        d = haversine_km(lat, lon, n_lat, n_lon)
+        if d < 0.2:
+            return round(dens, 2)
+        w = 1.0 / (d ** 2)
+        weights.append(w)
+        values.append(dens)
+    total_w = sum(weights)
+    if total_w == 0:
+        return 5.2
+    est = sum(w * v for w, v in zip(weights, values)) / total_w
+    return round(max(1.5, min(est, 20.0)), 2)
 
 
 # ── Haversine distance ─────────────────────────────────────────────────────────
@@ -314,10 +327,7 @@ def main():
             print(f"Error reading {f.name}: {e}")
             
     pm25_df = pd.concat(df_list, ignore_index=True)
-    # Convert PM2.5 timestamps to IST (Asia/Kolkata) to match Open-Meteo local weather & Delhi peak traffic hours
-    dt_series = pd.to_datetime(pm25_df['datetime'])
-    if dt_series.dt.tz is None:
-        dt_series = dt_series.dt.tz_localize('UTC')
+    dt_series = pd.to_datetime(pm25_df['datetime'], utc=True)
     pm25_df['datetime'] = dt_series.dt.tz_convert('Asia/Kolkata').dt.tz_localize(None)
     
     print(f"Loaded {len(pm25_df)} PM2.5 readings for {len(station_coords)} stations (converted to IST).")

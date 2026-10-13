@@ -8,7 +8,7 @@
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
-      "Resource": "arn:aws:logs:ap-south-1:991166714312:*"
+      "Resource": "arn:aws:logs:ap-south-1:*:*"
     },
     {
       "Effect": "Allow",
@@ -16,21 +16,21 @@
         "dynamodb:GetItem",
         "dynamodb:PutItem"
       ],
-      "Resource": "arn:aws:dynamodb:ap-south-1:991166714312:table/aqi-cache"
+      "Resource": "arn:aws:dynamodb:ap-south-1:*:table/aqi-cache"
     },
     {
       "Effect": "Allow",
       "Action": [
         "bedrock:InvokeModel"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:bedrock:ap-south-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
     },
     {
       "Effect": "Allow",
       "Action": [
         "sagemaker:InvokeEndpoint"
       ],
-      "Resource": "arn:aws:sagemaker:ap-south-1:991166714312:endpoint/*"
+      "Resource": "arn:aws:sagemaker:ap-south-1:*:endpoint/*"
     },
     {
       "Effect": "Allow",
@@ -38,8 +38,8 @@
         "s3:GetObject"
       ],
       "Resource": [
-        "arn:aws:s3:::aqi-features-991166714312/*",
-        "arn:aws:s3:::aqi-models-991166714312/*"
+        "arn:aws:s3:::aqi-features-*/*",
+        "arn:aws:s3:::aqi-models-*/*"
       ]
     }
   ]

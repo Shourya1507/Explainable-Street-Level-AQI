@@ -23,11 +23,12 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
-MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
+MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-models")
 MODEL_KEY = os.environ.get("MODEL_KEY", "nowcast/nowcast_model.ubj")
 
 # ── Feature columns — MUST match train_nowcast.py exactly ─────────────────────
+
 FEATURE_COLS = [
     "nearby_station_avg", "nearby_station_idw", "neighbor_spread",
     "nearest_station_km",
@@ -65,7 +66,7 @@ _model_cache = None   # module-level — survives warm Lambda invocations
 _booster_cache = None
 
 
-def _load_model():
+def _load_model(local_path: str = None):
     global _model_cache, _booster_cache
     if _model_cache is not None:
         return _model_cache, _booster_cache
@@ -76,22 +77,30 @@ def _load_model():
         logger.error("xgboost not installed — Lambda Layer missing")
         raise
 
-    import boto3
-    logger.info(f"Loading model from s3://{MODELS_BUCKET}/{MODEL_KEY}")
-    s3 = boto3.client("s3", region_name=REGION)
-    model_path = "/tmp/nowcast_model.ubj"
-    s3.download_file(MODELS_BUCKET, MODEL_KEY, model_path)
+    target_path = local_path
+    if not target_path:
+        for candidate in ["/tmp/nowcast_model.ubj", "model_output/nowcast_model.ubj", "backend/ml/model_output/nowcast_model.ubj"]:
+            if os.path.exists(candidate):
+                target_path = candidate
+                break
+
+    if not target_path or not os.path.exists(target_path):
+        import boto3
+        logger.info(f"Loading model from s3://{MODELS_BUCKET}/{MODEL_KEY}")
+        s3 = boto3.client("s3", region_name=REGION)
+        target_path = "/tmp/nowcast_model.ubj"
+        s3.download_file(MODELS_BUCKET, MODEL_KEY, target_path)
 
     # XGBRegressor wrapper — used for predict()
     model = xgb.XGBRegressor()
-    model.load_model(model_path)
+    model.load_model(target_path)
 
     # Underlying Booster — used for pred_contribs (native SHAP)
     booster = model.get_booster()
 
     _model_cache = model
     _booster_cache = booster
-    logger.info("Model loaded and cached")
+    logger.info(f"Model loaded and cached from {target_path}")
     return model, booster
 
 

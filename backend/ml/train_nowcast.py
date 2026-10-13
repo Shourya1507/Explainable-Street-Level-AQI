@@ -20,15 +20,19 @@ try:
     import pandas as pd
     import numpy as np
     import xgboost as xgb
-    import shap
     import boto3
 except ImportError:
-    print("Install: pip install pandas numpy xgboost shap boto3 pyarrow")
+    print("Install: pip install pandas numpy xgboost boto3 pyarrow")
     sys.exit(1)
 
+try:
+    import shap
+except ImportError:
+    shap = None
+
 REGION = os.environ.get("AWS_REGION", "ap-south-1")
-ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
-MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}")
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
+MODELS_BUCKET = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-models")
 
 # Feature columns for the model (must match build_features.py)
 FEATURE_COLS = [
@@ -180,9 +184,18 @@ def train_final_model(df: pd.DataFrame) -> xgb.XGBRegressor:
 
 def compute_shap_for_sample(model: xgb.XGBRegressor, X_sample: pd.DataFrame) -> pd.DataFrame:
     """Compute SHAP values for a sample of rows."""
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_sample)
-    return pd.DataFrame(shap_values, columns=FEATURE_COLS)
+    if shap is not None:
+        try:
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(X_sample)
+            return pd.DataFrame(shap_values, columns=FEATURE_COLS)
+        except Exception as e:
+            print(f"SHAP explainer fallback to native: {e}")
+
+    # Native XGBoost Tree SHAP (pred_contribs=True gives mathematically identical Shapley values)
+    dmat = xgb.DMatrix(X_sample, feature_names=FEATURE_COLS)
+    contribs = model.get_booster().predict(dmat, pred_contribs=True)[:, :-1]
+    return pd.DataFrame(contribs, columns=FEATURE_COLS)
 
 
 def main():

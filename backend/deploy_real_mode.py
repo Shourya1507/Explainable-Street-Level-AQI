@@ -17,11 +17,11 @@ import tempfile
 from pathlib import Path
 import boto3
 
-PROFILE    = os.environ.get("AWS_PROFILE", "Shourya Sankrit")
+PROFILE    = os.environ.get("AWS_PROFILE", "")
 REGION     = os.environ.get("AWS_REGION", "ap-south-1")
-ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "991166714312")
-MODELS_BUCKET   = f"aqi-models-{ACCOUNT_ID}"
-FEATURES_BUCKET = f"aqi-features-{ACCOUNT_ID}"
+ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID", "")
+MODELS_BUCKET   = os.environ.get("MODELS_BUCKET", f"aqi-models-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-models")
+FEATURES_BUCKET = os.environ.get("FEATURES_BUCKET", f"aqi-features-{ACCOUNT_ID}" if ACCOUNT_ID else "aqi-features")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
